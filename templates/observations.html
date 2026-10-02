@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Observations | Olumira{% endblock %}
+
+{% block content %}
+
+<div class="observation-page-header">
+	<div>
+		<p class="eyebrow">OBSERVATIONS</p>
+		<h1>Add an observation</h1>
+		<p>Capture a moment from today.</p>
+	</div>
+</div>
+
+<section class="observation-form-panel" aria-labelledby="observation-form-title">
+	{% if observation_saved %}
+	<p class="observation-form-status" role="status">Observation saved to the database.</p>
+	{% endif %}
+
+	<div class="observation-form-heading">
+		<div class="observation-form-mark" aria-hidden="true">✎</div>
+		<div>
+			<p class="card-label">NEW ENTRY</p>
+			<h2 id="observation-form-title">Observation details</h2>
+		</div>
+	</div>
+
+	<form class="observation-form" method="post" action="{{ url_for('observations') }}">
+		<div class="observation-form-grid">
+			<div class="observation-field observation-field-wide">
+				<label for="observation-activity">Activity</label>
+				<input id="observation-activity" name="activity" type="text" value="{{ form_values['activity'] }}" placeholder="e.g., Outdoor play" required>
+			</div>
+
+			<div class="observation-field">
+				<label for="observation-date">Date</label>
+				<input id="observation-date" name="date" type="date" value="{{ form_values['date'] }}" required>
+			</div>
+
+			<div class="observation-field">
+				<label for="observation-mood">Mood</label>
+				<select id="observation-mood" name="mood">
+					<option value="" {% if not form_values['mood'] %}selected{% endif %}>Choose a mood</option>
+					<option {% if form_values['mood'] == 'Happy' %}selected{% endif %}>Happy</option>
+					<option {% if form_values['mood'] == 'Calm' %}selected{% endif %}>Calm</option>
+					<option {% if form_values['mood'] == 'Excited' %}selected{% endif %}>Excited</option>
+					<option {% if form_values['mood'] == 'Frustrated' %}selected{% endif %}>Frustrated</option>
+					<option {% if form_values['mood'] == 'Sad' %}selected{% endif %}>Sad</option>
+					<option {% if form_values['mood'] == 'Tired' %}selected{% endif %}>Tired</option>
+					<option {% if form_values['mood'] == 'Other' %}selected{% endif %}>Other</option>
+				</select>
+			</div>
+
+			<div class="observation-field observation-field-wide">
+				<label for="observation-notes">Notes</label>
+				<textarea id="observation-notes" name="notes" rows="5" placeholder="What happened?" required>{{ form_values['notes'] }}</textarea>
+			</div>
+
+			<div class="observation-field observation-field-wide">
+				<label for="observation-tags">Tags <span class="field-optional">Optional</span></label>
+				<input id="observation-tags" name="tags" type="text" value="{{ form_values['tags'] }}" placeholder="Outside, Exploration">
+			</div>
+		</div>
+
+		<div class="observation-form-actions">
+			<button type="submit" class="observation-save-button">
+				<span aria-hidden="true">＋</span>
+				Save Observation
+			</button>
+		</div>
+	</form>
+</section>
+
+<section class="saved-observations" aria-labelledby="saved-observations-title">
+	<div class="saved-observations-header">
+		<div>
+			<p class="eyebrow">JOURNAL</p>
+			<h2 id="saved-observations-title">Recent Observations</h2>
+		</div>
+		<span class="observation-count">{{ observations|length }}</span>
+	</div>
+
+	{% if observations %}
+	<div class="saved-observations-grid">
+		{% for observation in observations %}
+		<article class="saved-observation-card">
+			<div class="saved-observation-topline">
+				<time datetime="{{ observation['date'] }}">{{ observation['date'] }}</time>
+				{% if observation['mood'] %}<span class="saved-observation-mood">{{ observation['mood'] }}</span>{% endif %}
+			</div>
+			<h3>{{ observation['activity'] }}</h3>
+			{% if observation['notes'] %}<p class="saved-observation-notes">{{ observation['notes'] }}</p>{% endif %}
+			{% if observation['tags'] %}
+			<div class="saved-observation-tags" aria-label="Tags">
+				{% for tag in observation['tags'].split(',') %}
+				{% set clean_tag = tag.strip() %}
+				{% if clean_tag %}<span>{{ clean_tag }}</span>{% endif %}
+				{% endfor %}
+			</div>
+			{% endif %}
+		</article>
+		{% endfor %}
+	</div>
+	{% else %}
+	<p class="saved-observations-empty">No saved observations yet.</p>
+	{% endif %}
+</section>
+
+{% endblock %}

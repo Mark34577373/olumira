@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard | Olumira{% endblock %}
+
+{% block content %}
+
+<section class="welcome">
+	<div>
+		<p class="eyebrow">CAREGIVER DASHBOARD</p>
+		<h1>Good morning</h1>
+		<p class="subtitle">Here's what's happening today.</p>
+	</div>
+</section>
+
+<section class="progress-section">
+	<div class="section-header">
+		<div>
+			<h2>Today's Progress</h2>
+			<p>{{ completed_routines }} of {{ routine_count }} activities completed</p>
+		</div>
+		<div class="progress-number">{{ progress }}%</div>
+	</div>
+	<progress class="progress-bar" aria-label="Today's activities" value="{{ progress }}" max="100">{{ progress }}%</progress>
+</section>
+
+<section class="dashboard-grid">
+	<div class="dashboard-card routine-card">
+		<div class="card-header">
+			<div>
+				<p class="card-label">TODAY</p>
+				<h2>Morning Routine</h2>
+			</div>
+			<span class="card-icon" aria-hidden="true">✓</span>
+		</div>
+
+		<div class="task-list">
+			{% if routines %}
+			{% for routine in routines %}
+			<form class="task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
+				<input type="hidden" name="return_to" value="dashboard">
+				<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
+					<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
+					<span>{{ routine['name'] }}</span>
+				</button>
+			</form>
+			{% endfor %}
+			{% else %}
+			<p>No routines have been added yet.</p>
+			{% endif %}
+		</div>
+
+		<a href="/routines" class="card-link">View routine →</a>
+	</div>
+
+	<div class="dashboard-card">
+		<div class="card-header">
+			<div>
+				<p class="card-label">QUICK ACTIONS</p>
+				<h2>What would you like to do?</h2>
+			</div>
+		</div>
+
+		<div class="quick-actions">
+			<a href="/routines" class="action-button">
+				<span aria-hidden="true">✓</span>
+				<div>
+					<strong>Routines</strong>
+					<small>Manage activities</small>
+				</div>
+			</a>
+			<a href="/communication" class="action-button">
+				<span aria-hidden="true">💬</span>
+				<div>
+					<strong>Communicate</strong>
+					<small>Open communication</small>
+				</div>
+			</a>
+			<a href="/observations" class="action-button">
+				<span aria-hidden="true">＋</span>
+				<div>
+					<strong>Add Observation</strong>
+					<small>Record something new</small>
+				</div>
+			</a>
+		</div>
+	</div>
+</section>
+
+<section class="recent-section">
+	<div class="section-header">
+		<div>
+			<p class="card-label">RECENT</p>
+			<h2>Recent Observations</h2>
+		</div>
+		<a href="/observations" class="text-link">View all →</a>
+	</div>
+
+	{% if recent_observations %}
+	<div class="observations-grid">
+		{% for observation in recent_observations %}
+		<div class="observation-card">
+			<span class="observation-date">{{ observation['date'] }}</span>
+			<h3>{{ observation['activity'] }}</h3>
+			<p>{{ observation['notes'] }}</p>
+		</div>
+		{% endfor %}
+	</div>
+	{% else %}
+	<p class="recent-observations-empty">No observations yet. Add your first observation to get started.</p>
+	{% endif %}
+</section>
+
+{% endblock %}

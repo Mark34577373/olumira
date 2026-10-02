@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Communication | Olumira{% endblock %}
+
+{% block content %}
+
+<div class="communication-page" id="communication-app">
+	<header class="page-header communication-header">
+		<div>
+			<p class="eyebrow">COMMUNICATION</p>
+			<h1>What do you need?</h1>
+		</div>
+		<button type="button" class="add-communication-button" id="open-communication-dialog">
+			<span aria-hidden="true">＋</span>
+			<span>Add Communication</span>
+		</button>
+	</header>
+
+	<div class="communication-workspace">
+		<div class="communication-choices">
+			{% for category in communication_categories %}
+			<section class="communication-category" data-category="{{ category }}" aria-labelledby="category-{{ loop.index }}">
+				<h2 id="category-{{ loop.index }}">{{ category }}</h2>
+				<div class="communication-options">
+					{% for option in communication_options if option["category"] == category %}
+					<button type="button" class="communication-option" data-communication-option data-id="{{ option['id'] }}" data-name="{{ option['name'] }}" data-icon="{{ option['icon'] }}" data-message="{{ option['message'] }}" data-category="{{ option['category'] }}" aria-pressed="false">
+						<span class="communication-option-icon" aria-hidden="true">{{ option["icon"] }}</span>
+						<span class="communication-option-name">{{ option["name"] }}</span>
+					</button>
+					{% endfor %}
+				</div>
+				<div class="custom-communication-options" data-custom-options="{{ category }}"></div>
+			</section>
+			{% endfor %}
+		</div>
+
+		<section class="communication-display" aria-live="polite" aria-atomic="true" aria-label="Selected communication">
+			<div class="communication-empty" id="communication-empty">
+				<span class="communication-empty-mark" aria-hidden="true">…</span>
+				<p>No message selected</p>
+			</div>
+			<div class="communication-message" id="communication-message" hidden>
+				<span class="communication-message-icon" id="communication-message-icon" aria-hidden="true"></span>
+				<h2 id="communication-message-name"></h2>
+				<p id="communication-message-text"></p>
+			</div>
+		</section>
+	</div>
+
+	<dialog class="communication-dialog" id="communication-dialog" aria-labelledby="communication-dialog-title">
+		<form id="communication-form">
+			<div class="communication-dialog-header">
+				<div>
+					<p class="eyebrow">CUSTOM</p>
+					<h2 id="communication-dialog-title">Add communication</h2>
+				</div>
+				<button type="button" class="dialog-close" id="close-communication-dialog" aria-label="Close dialog">×</button>
+			</div>
+
+			<label for="communication-name">Name</label>
+			<input id="communication-name" name="name" type="text" maxlength="40" required>
+
+			<label for="communication-icon">Icon</label>
+			<input id="communication-icon" name="icon" type="text" maxlength="8" required>
+
+			<label for="communication-message-input">Message</label>
+			<input id="communication-message-input" name="message" type="text" maxlength="100" required>
+
+			<label for="communication-category">Category</label>
+			<select id="communication-category" name="category">
+				<option value="Needs">Needs</option>
+				<option value="Activities">Activities</option>
+			</select>
+
+			<div class="communication-dialog-actions">
+				<button type="button" class="dialog-cancel" id="cancel-communication-dialog">Cancel</button>
+				<button type="submit" class="dialog-submit">Add</button>
+			</div>
+		</form>
+	</dialog>
+</div>
+
+{% endblock %}

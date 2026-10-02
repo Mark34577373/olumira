@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Resources | Olumira{% endblock %}
+
+{% block content %}
+
+<section class="page-header resource-header">
+    <div>
+        <p class="eyebrow">RESOURCES</p>
+        <h1>Support library</h1>
+        <p>Helpful ideas for communication, routines, and care.</p>
+    </div>
+</section>
+
+<section class="resource-library">
+    <div class="resource-filter-bar" aria-label="Resource categories">
+        {% for resource_type in resource_types %}
+        <button type="button" class="resource-filter{% if loop.first %} active{% endif %}" data-filter="{{ resource_type }}">
+            {{ resource_type }}
+        </button>
+        {% endfor %}
+    </div>
+
+    <div class="resource-detail-panel" id="resource-detail-panel" hidden>
+        <p class="eyebrow" id="resource-detail-category">COMMUNICATION</p>
+        <h2 id="resource-detail-title">Visual Communication</h2>
+        <p id="resource-detail-copy">Using pictures, symbols, and simple visual choices can help make communication easier.</p>
+        <button type="button" class="resource-back-button" id="resource-back-button">Back to Resources</button>
+    </div>
+
+    <div class="resource-grid">
+        {% for resource in resources %}
+        <article
+            class="resource-card"
+            data-category="{{ resource['category'] }}"
+            data-title="{{ resource['title'] }}"
+            data-copy="{{ resource['details'] }}"
+            tabindex="0"
+        >
+            <div class="resource-card-header">
+                <span class="resource-category-tag">{{ resource['category'] }}</span>
+            </div>
+            <h2>{{ resource['title'] }}</h2>
+            <p class="resource-summary">{{ resource['summary'] }}</p>
+            <p class="resource-details">{{ resource['details'] }}</p>
+            <button type="button" class="resource-learn-more" data-title="{{ resource['title'] }}" data-category="{{ resource['category'] }}" data-copy="{{ resource['details'] }}">
+                {{ resource['action'] }}
+            </button>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+
+{% endblock %}
