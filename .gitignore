@@ -1,26 +1,23 @@
-# Python
+
 __pycache__/
 *.py[cod]
 *.pyo
 *.pyd
 
-# Virtual environments
+
 venv/
 .env
 .venv/
 
-# Local OS files
 .DS_Store
 Thumbs.db
 
-# Local database files
 database/*.db
 database/*.db.*
 
-# Editor / IDE files
+
 .vscode/
 .idea/
 
-# Logs / temporary files
 *.log
 *.tmp
