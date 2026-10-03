@@ -1,6 +1,9 @@
+import os
 import sqlite3
 
 DATABASE = "database/olumira.db"
+
+os.makedirs("database", exist_ok=True)
 
 
 def get_connection():
