@@ -142,46 +142,6 @@ olumira/
 │       └── app.js
 └── database/
     └── olumira.db
-```
-
-## Running Locally
-
-### 1. Clone the repository
-
-```bash
-git clone https://github.com/YOUR-USERNAME/olumira.git
-cd olumira
-```
-
-### 2. Create a virtual environment
-
-```bash
-python3 -m venv venv
-```
-
-### 3. Activate the virtual environment
-
-```bash
-source venv/bin/activate
-```
-
-### 4. Install dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-### 5. Run the application
-
-```bash
-python3 app.py
-```
-
-Then open:
-
-```text
-http://127.0.0.1:5000
-```
 
 ## Current Status
 
