@@ -4,13 +4,15 @@
 
 {% block content %}
 
-<div class="communication-page" id="communication-app" data-storage-scope="{{ current_user.id }}">
+{% if g.profile %}<p class="ui-alert">{{ g.profile.display_name }} · {{ g.profile.communication or 'No communication preferences added yet.' }}</p>{% endif %}
+<p class="auth-hint">Built-in communication choices are available to everyone in this workspace. Custom choices stay in this browser for your account and selected profile; they are not shared with other caregivers.</p>
+<div class="communication-page" id="communication-app" data-can-write="{{ 'true' if can('communication.manage') else 'false' }}" data-storage-scope="{{ current_user.id }}.{{ g.workspace_id }}.{{ g.profile_id or 'workspace' }}">
 	<header class="page-header communication-header">
 		<div>
 			<p class="eyebrow">COMMUNICATION</p>
 			<h1>What do you need?</h1>
 		</div>
-		<button type="button" class="add-communication-button" id="open-communication-dialog">
+		<button type="button" class="add-communication-button" id="open-communication-dialog" {% if not can('communication.manage') %}hidden disabled{% endif %}>
 			<span aria-hidden="true">＋</span>
 			<span>Add Communication</span>
 		</button>

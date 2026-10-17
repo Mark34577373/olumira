@@ -34,10 +34,13 @@ def configuration(overrides=None):
         AUTH_REGISTER_LIMIT='5 per hour',
         AUTH_RECOVERY_IP_LIMIT='5 per hour', AUTH_RECOVERY_ACCOUNT_LIMIT='3 per hour',
         AUTH_SETTINGS_LIMIT='10 per hour', AUTH_TOKEN_LIMIT='10 per hour',
+        INVITATION_SECONDS=int(os.getenv('INVITATION_SECONDS', '86400')),
+        WORKSPACE_INVITE_LIMIT='10 per hour',
+        WORKSPACE_CREATE_LIMIT='10 per hour',
         VERIFY_TOKEN_SECONDS=int(os.getenv('VERIFY_TOKEN_SECONDS', '3600')),
         RESET_TOKEN_SECONDS=int(os.getenv('RESET_TOKEN_SECONDS', '1800')),
         EMAIL_CHANGE_TOKEN_SECONDS=int(os.getenv('EMAIL_CHANGE_TOKEN_SECONDS', '1800')),
-        PUBLIC_APP_URL=os.getenv('PUBLIC_APP_URL', 'http://127.0.0.1:5050' if environment != 'production' else ''),
+        PUBLIC_APP_URL=os.getenv('PUBLIC_APP_URL', 'http://127.0.0.1:5000' if environment != 'production' else ''),
         MAIL_BACKEND=os.getenv('MAIL_BACKEND', 'development' if environment != 'production' else 'smtp'),
         MAIL_FROM=os.getenv('MAIL_FROM', 'Olumira <no-reply@example.com>'),
         MAIL_ENCRYPTION_KEY=os.getenv('MAIL_ENCRYPTION_KEY'),
@@ -83,7 +86,7 @@ def configuration(overrides=None):
         raise ValueError('PUBLIC_APP_URL must be a canonical application origin')
     if values['MAIL_BACKEND'] not in {'development', 'smtp'} or values['SMTP_SECURITY'] not in {'starttls', 'ssl'}:
         raise ValueError('Use development or TLS-protected SMTP email delivery')
-    for setting in ('VERIFY_TOKEN_SECONDS', 'RESET_TOKEN_SECONDS', 'EMAIL_CHANGE_TOKEN_SECONDS'):
+    for setting in ('VERIFY_TOKEN_SECONDS', 'RESET_TOKEN_SECONDS', 'EMAIL_CHANGE_TOKEN_SECONDS', 'INVITATION_SECONDS'):
         if not 60 <= values[setting] <= 86400:
             raise ValueError('Account token lifetimes must be between one minute and one day')
     if environment == 'production':

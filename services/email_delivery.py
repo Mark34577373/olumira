@@ -12,7 +12,7 @@ from flask import current_app, render_template
 from cryptography.fernet import Fernet
 from sqlalchemy import select
 from olumira.extensions import db
-from olumira.models import EmailOutbox, AccountToken
+from olumira.models import EmailOutbox, AccountToken, WorkspaceInvitation
 from services.database import transaction
 
 SUBJECTS = {'verify_email': 'Verify your Olumira email', 'reset_password': 'Reset your Olumira password',
@@ -90,7 +90,9 @@ def deliver_pending(limit=20):
             if job is None:
                 break
             token = store.get(AccountToken, job.token_hash) if job.token_hash else None
-            if job.expires_at <= moment or (job.token_hash and (not token or token.used_at is not None or token.expires_at <= moment)):
+            invitation = store.get(WorkspaceInvitation, job.invitation_id) if job.invitation_id else None
+            invalid_invitation = job.invitation_id and (not invitation or invitation.revoked_at is not None or invitation.accepted_at is not None or invitation.expires_at <= moment)
+            if invalid_invitation or job.expires_at <= moment or (job.token_hash and (not token or token.used_at is not None or token.expires_at <= moment)):
                 job.cancelled_at = moment
                 cancelled += 1
                 continue

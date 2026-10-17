@@ -1,3 +1,4 @@
+from services.workspaces import scope, association, care_audit
 from datetime import date as calendar_date
 from sqlalchemy import select, func
 from olumira.extensions import db
@@ -19,18 +20,34 @@ def add_observation(owner_id, activity, date, notes, mood, tags):
     if not values['activity'] or any(len(values[key]) > limit for key, limit in limits.items()):
         return None
     with transaction() as session:
-        if session.scalar(select(func.count()).select_from(Observation).where(Observation.owner_id == owner_id)) >= MAX_OBSERVATIONS:
+        if session.scalar(select(func.count()).select_from(Observation).where(scope(Observation, owner_id))) >= MAX_OBSERVATIONS:
             return None
-        observation = Observation(owner_id=owner_id, **values)
+        observation = Observation(owner_id=owner_id, **association(), **values)
         session.add(observation)
         session.flush()
         result = observation.id
+        care_audit('observation.created',result)
     return result
 
 
 def get_observations(owner_id, limit=None):
-    query = select(Observation).where(Observation.owner_id == owner_id).order_by(Observation.date.desc(), Observation.id.desc())
+    query = select(Observation).where(scope(Observation, owner_id)).order_by(Observation.date.desc(), Observation.id.desc())
     if limit is not None:
         query = query.limit(limit)
     return [dict(id=o.id, owner_id=o.owner_id, activity=o.activity, date=o.date, notes=o.notes, mood=o.mood, tags=o.tags)
             for o in db.session.scalars(query)]
+
+
+def edit_observation(owner_id,observation_id,values):
+    clean={key:(values.get(key) or '').strip() for key in ('activity','date','notes','mood','tags')}
+    try:
+        valid=calendar_date.fromisoformat(clean['date']).isoformat()==clean['date']
+    except ValueError: valid=False
+    limits=dict(activity=120,date=10,notes=2000,mood=20,tags=120)
+    if not valid or not clean['activity'] or any(len(clean[key])>limit for key,limit in limits.items()): return 'invalid'
+    with transaction():
+        observation=db.session.scalar(select(Observation).where(Observation.id==observation_id,scope(Observation,owner_id)).with_for_update())
+        if not observation: return 'missing'
+        for key,value in clean.items(): setattr(observation,key,value)
+        care_audit('observation.updated',observation.id)
+    return 'ok'

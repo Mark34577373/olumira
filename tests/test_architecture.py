@@ -11,7 +11,7 @@ from support import post, create_user, login, PASSWORD, production_mail_settings
 class ArchitectureTests(unittest.TestCase):
     def test_factory_and_blueprints(self):
         app = create_app({'APP_ENV': 'testing'})
-        self.assertEqual(set(app.blueprints), {'dashboard', 'routines', 'communication', 'observations', 'resources', 'auth'})
+        self.assertEqual(set(app.blueprints), {'dashboard', 'routines', 'communication', 'observations', 'resources', 'auth', 'workspaces'})
         self.assertFalse(app.debug)
 
     def test_production_configuration_fails_closed(self):

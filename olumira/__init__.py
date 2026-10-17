@@ -44,11 +44,11 @@ def create_app(config=None):
     limiter.init_app(app)
     csrf.init_app(app)
 
-    from .routes import dashboard, routines, communication, observations, resources, auth
-    for module in (dashboard, routines, communication, observations, resources, auth):
+    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces
+    for module in (dashboard, routines, communication, observations, resources, auth, workspaces):
         app.register_blueprint(module.bp)
 
-    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources'}
+    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces'}
 
     @login_manager.unauthorized_handler
     def require_login():
@@ -60,6 +60,8 @@ def create_app(config=None):
 
     @app.before_request
     def authorize_workspace():
+        if request.endpoint == 'workspaces.accept':
+            return
         if request.blueprint not in protected_blueprints:
             return
         if not current_user.is_authenticated:
@@ -67,12 +69,33 @@ def create_app(config=None):
         # Cookie-supplied legacy owner_id is never used for authorization.
         if not current_user.email_verified:
             return redirect(url_for('auth.verification'))
-        g.owner_id = current_user.owner_id
+        from services.workspaces import resolve_context, require
+        resolve_context()
+        if request.blueprint != 'workspaces' and not g.workspace_id:
+            return redirect(url_for('workspaces.index'))
+        if request.method == 'POST' and request.blueprint != 'workspaces':
+            permission = {
+                'routines.add_routine_route': 'routines.create',
+                'routines.add_template_route': 'routines.create',
+                'routines.toggle_routine_completion': 'routines.complete',
+                'routines.edit_routine_route': 'routines.edit',
+                'routines.delete_routine_route': 'routines.edit',
+                'observations.observations': 'observations.create',
+                'observations.edit_observation_route': 'observations.edit',
+            }.get(request.endpoint)
+            if permission:
+                require(permission, lock=True)
+
+    @app.context_processor
+    def workspace_template_helpers():
+        from services.workspaces import can
+        return {'can': can}
 
     @app.after_request
     def security_headers(response):
         if request.endpoint != 'static':
             response.headers['Cache-Control'] = 'no-store'
+        response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['Referrer-Policy'] = 'no-referrer'
@@ -85,6 +108,7 @@ def create_app(config=None):
 
     messages = {
         400: ('Let’s check that request', 'Some information was missing or could not be accepted. Please go back and try again.'),
+        403: ('This action needs permission', 'Your workspace role does not allow this action. Ask a workspace owner for help.'),
         404: ('This page has wandered off', 'We couldn’t find that page or item. You can return to your dashboard to continue.'),
         405: ('That action isn’t available here', 'Please use the page controls to complete this action.'),
         429: ('Let’s take a short pause', 'Too many attempts. Please wait a while before trying again.'),
@@ -96,6 +120,17 @@ def create_app(config=None):
         if code >= 500:
             # Log only the status and endpoint, never form data, SQL or exception strings.
             app.logger.error('Request failed: status=%s endpoint=%s', code, request.endpoint)
+        if code == 403 and getattr(g, 'membership', None) is not None and current_user.is_authenticated:
+            # Abort must never commit a partially executed care operation. Record
+            # the denied capability only after rolling back that transaction.
+            db.session.rollback()
+            try:
+                from services.workspaces import audit
+                audit('permission.denied', g.workspace_id, current_user.id, request.endpoint)
+                db.session.commit()
+            except SQLAlchemyError:
+                db.session.rollback()
+                app.logger.warning('Permission denial audit could not be recorded; details redacted')
         title, message = messages[code]
         response = error.get_response()
         response.data = render_template('error.html', code=code, heading=title, message=message)

@@ -5,9 +5,13 @@ from datetime import date
 from pathlib import Path
 from sqlalchemy import inspect, select, text
 from olumira.extensions import db
-from olumira.models import Owner, Routine, Observation, RoutineCompletion, User, AuthSession, AccountToken, EmailOutbox
+from olumira.models import Owner, Routine, Observation, RoutineCompletion, User, AuthSession, AccountToken, EmailOutbox, FamilyWorkspace, WorkspaceMembership, CareProfile, WorkspaceInvitation, AuditEvent
 
 MODELS = (Owner, Routine, Observation, RoutineCompletion)
+LEGACY_COLUMNS = {'owners': ('id','created_at'), 'routines': ('id','owner_id','name','category'),
+                  'observations': ('id','owner_id','activity','date','notes','mood','tags'),
+                  'routine_completions': ('routine_id','completion_date')}
+
 
 
 def backup_sqlite(source, backup):
@@ -37,9 +41,10 @@ def read_snapshot(path):
         for model in MODELS:
             table = model.__table__
             columns = {r['name'] for r in connection.execute(f'PRAGMA table_info({table.name})')}
-            if columns != set(table.columns.keys()):
+            baseline=set(LEGACY_COLUMNS[table.name])
+            if columns not in (baseline, baseline | {'workspace_id'}, baseline | {'workspace_id','profile_id'}):
                 raise ValueError('Source schema does not match the supported baseline')
-            records[table.name] = [dict(r) for r in connection.execute(f'SELECT * FROM {table.name}')]
+            records[table.name] = [dict(r) for r in connection.execute(f'SELECT {",".join(LEGACY_COLUMNS[table.name])} FROM {table.name}')]
     owners = {r['id'] for r in records['owners']}
     routines = {r['id'] for r in records['routines']}
     for model in MODELS:
@@ -50,7 +55,7 @@ def read_snapshot(path):
             if key in seen or any(v is None for v in key):
                 raise ValueError('Source contains duplicate or missing primary keys')
             seen.add(key)
-            if any(record[c.name] is None for c in table.columns if not c.nullable):
+            if any(record[c.name] is None for c in table.columns if not c.nullable and c.name in record):
                 raise ValueError('Source has missing required values')
             if 'owner_id' in record and record['owner_id'] is not None and record['owner_id'] not in owners:
                 raise ValueError('Source contains an unknown workspace relationship')
@@ -73,20 +78,20 @@ def transfer_sqlite(source, backup):
     records = read_snapshot(snapshot)
     with closing(sqlite3.connect(snapshot)) as source_connection:
         tables = {r[0] for r in source_connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
-        for table in ('users', 'auth_sessions', 'account_tokens', 'email_outbox'):
+        for table in ('users', 'auth_sessions', 'account_tokens', 'email_outbox', 'family_workspaces', 'workspace_memberships', 'care_profiles', 'workspace_invitations', 'audit_events'):
             if table in tables and source_connection.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone():
                 raise ValueError('Legacy-only transfer refuses account/session records; use an account-aware migration')
     with db.engine.begin() as connection:
         if connection.dialect.name == 'postgresql':
-            connection.execute(text('LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox IN ACCESS EXCLUSIVE MODE'))
+            connection.execute(text('LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events IN ACCESS EXCLUSIVE MODE'))
         elif connection.dialect.name == 'sqlite':
             connection.exec_driver_sql('BEGIN IMMEDIATE')
         else:
             raise ValueError('Unsupported destination database')
         inspector = inspect(connection)
-        if 'alembic_version' not in inspector.get_table_names() or connection.execute(text('SELECT version_num FROM alembic_version')).scalar() != '0003':
+        if 'alembic_version' not in inspector.get_table_names() or connection.execute(text('SELECT version_num FROM alembic_version')).scalar() != '0006':
             raise ValueError('Destination must be migrated to the supported revision first')
-        for model in (*MODELS, User, AuthSession, AccountToken, EmailOutbox):
+        for model in (*MODELS, User, AuthSession, AccountToken, EmailOutbox, FamilyWorkspace, WorkspaceMembership, CareProfile, WorkspaceInvitation, AuditEvent):
             if connection.execute(select(model.__table__).limit(1)).first() is not None:
                 raise ValueError('Destination is not empty; transfer refused')
         for model in MODELS:
@@ -95,7 +100,7 @@ def transfer_sqlite(source, backup):
             if rows:
                 connection.execute(table.insert(), rows)
             actual = [dict(r) for r in connection.execute(select(table)).mappings()]
-            normalize = lambda values: sorted(tuple(r[c.name] for c in table.columns) for r in values)
+            normalize = lambda values: sorted(tuple(r[c] for c in LEGACY_COLUMNS[table.name]) for r in values)
             if normalize(actual) != normalize(rows):
                 raise ValueError('Destination verification failed; transaction rolled back')
         if connection.dialect.name == 'postgresql':

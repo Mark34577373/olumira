@@ -4,7 +4,7 @@ from flask_migrate import stamp
 from sqlalchemy import inspect
 from .extensions import db
 from .models import Owner, Routine, Observation, RoutineCompletion
-from services.data_transfer import backup_sqlite, read_snapshot, transfer_sqlite
+from services.data_transfer import backup_sqlite, read_snapshot, transfer_sqlite, LEGACY_COLUMNS
 
 
 def register_commands(app):
@@ -46,7 +46,7 @@ def register_commands(app):
             for model in (Owner, Routine, Observation, RoutineCompletion):
                 table = model.__table__
                 columns = inspector.get_columns(table.name)
-                if {c['name'] for c in columns} != set(table.columns.keys()):
+                if {c['name'] for c in columns} != set(LEGACY_COLUMNS[table.name]):
                     raise ValueError('Unexpected columns')
                 if set(inspector.get_pk_constraint(table.name)['constrained_columns']) != {c.name for c in table.primary_key}:
                     raise ValueError('Unexpected primary key')
@@ -56,7 +56,7 @@ def register_commands(app):
                         raise ValueError('Unexpected column type')
                     if not expected.primary_key and column['nullable'] != expected.nullable:
                         raise ValueError('Unexpected nullability')
-                expected_indexes = {(index.name, tuple(c.name for c in index.columns)) for index in table.indexes}
+                expected_indexes = {(index.name, tuple(c.name for c in index.columns)) for index in table.indexes if tuple(c.name for c in index.columns) != ('workspace_id',)}
                 actual_indexes = {(index['name'], tuple(index['column_names'])) for index in inspector.get_indexes(table.name)}
                 if expected_indexes != actual_indexes:
                     raise ValueError('Unexpected indexes')

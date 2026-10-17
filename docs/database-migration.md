@@ -95,3 +95,24 @@ Restore SQLite only while the app is stopped, to a **new path**, verify it, then
 Automated tests exercise baseline creation/repeated upgrade, model agreement, legacy adoption, constraints, cascade deletion, rollback, workspace isolation, and SQLite-to-SQLite import with exact row verification, refusal of nonempty targets, and forced mid-import failure. The PostgreSQL baseline was also compiled to SQL offline (without a server). No live PostgreSQL server was available. An opt-in `TEST_POSTGRES_URL` test covers PostgreSQL migration, transfer, completion preservation, and sequence advancement against a new disposable database. It remains skipped until that environment is supplied.
 
 Implementation follows the official [Flask application factory pattern](https://flask.palletsprojects.com/en/stable/patterns/appfactories/), [Flask-SQLAlchemy configuration](https://flask-sqlalchemy.palletsprojects.com/en/stable/config/), and [Flask-Migrate migration commands](https://flask-migrate.readthedocs.io/en/latest/).
+
+## Family workspace upgrade: 0003 → 0006
+
+The current head is **0006**. Follow the newer
+[family workspace runbook](days-17-21.md#safe-migrations-and-legacy-records) when
+upgrading account-era data. Back up the complete database, including account/token/
+mail tables, quiesce SQLite writes, then apply `flask --app app db upgrade` before
+starting the new app. Verify all original columns/records plus completion history
+against the backup. Migrations add scope without recreating routine parent tables.
+
+0004 backfills workspaces only for explicit existing User.owner_id associations;
+unknown/null legacy owners remain unassigned. 0005 adds optional profiles and leaves
+existing content at workspace level. 0006 adds invitations, encrypted outbox linkage
+and append-only audit events. No automatic deletion or downgrade is supported.
+A failed partial SQLite DDL upgrade requires reviewed backup recovery.
+
+The legacy-only transfer command now requires an empty **0006** destination and
+refuses source/destination account, workspace, profile, membership, invitation or
+audit data. It does not transfer authenticated collaboration databases. Earlier
+0003 instructions in this document describe the historical account release; use
+this section and the linked runbook for the current application.

@@ -54,7 +54,10 @@ def register_user(email: str, display_name: str, password: str):
             user = User(id=user_id, owner_id=owner_id, email=email, display_name=display_name,
                         password_hash=password_hash, email_verified=False)
             store.add(user)
-            store.add_all(Routine(owner_id=owner_id, name=name, category=category)
+            store.flush()
+            from services.workspaces import create_workspace
+            create_workspace(user_id, 'Our Family', workspace_id=owner_id)
+            store.add_all(Routine(owner_id=owner_id, workspace_id=owner_id, name=name, category=category)
                           for name, category in STARTER_ROUTINES)
             store.flush()
         return user

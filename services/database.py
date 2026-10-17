@@ -2,6 +2,7 @@
 from contextlib import contextmanager
 from datetime import datetime
 from zoneinfo import ZoneInfo
+from sqlalchemy import text
 from flask import current_app
 from olumira.extensions import db
 from olumira.models import Owner, Routine
@@ -40,5 +41,6 @@ def ensure_workspace(owner_id):
     with transaction() as session:
         if session.get(Owner, owner_id) is None:
             session.add(Owner(id=owner_id, created_at=today_string()))
-            session.add_all(Routine(owner_id=owner_id, name=name, category=category)
-                            for name, category in STARTER_ROUTINES)
+            session.flush()
+            session.execute(text('INSERT INTO routines (owner_id,name,category) VALUES (:owner,:name,:category)'),
+                [dict(owner=owner_id,name=name,category=category) for name,category in STARTER_ROUTINES])

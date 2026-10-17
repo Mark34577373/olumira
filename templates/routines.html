@@ -28,7 +28,7 @@
 				<form class="task-form routine-task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="return_to" value="routines">
-					<button type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
+					<button {% if not can('routines.complete') %}disabled{% endif %} type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="routine-check" aria-hidden="true">
 							{% if routine['completed'] %}✓{% endif %}
 						</span>
@@ -36,15 +36,16 @@
 					</button>
 				</form>
 
-				<div class="routine-actions">
+				{% if can('routines.edit') %}<div class="routine-actions">
 					<form method="post" action="{{ url_for('routines.delete_routine_route', routine_id=routine['id']) }}" data-confirm="Delete this routine?">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 						<button type="submit" class="routine-delete" aria-label="Delete {{ routine['name'] }}">Delete</button>
 					</form>
 				</div>
+                {% endif %}
 			</div>
 
-			<details class="routine-edit">
+            {% if can('routines.edit') %}<details class="routine-edit">
 				<summary>Edit <span class="visually-hidden">{{ routine['name'] }}</span></summary>
 				<form class="routine-edit-form" method="post" action="{{ url_for('routines.edit_routine_route', routine_id=routine['id']) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -52,7 +53,7 @@
 					<input class="routine-input" name="category" type="text" value="{{ routine['category'] }}" maxlength="40" list="category-options" aria-label="Category">
 					<button type="submit" class="routine-button">Save</button>
 				</form>
-			</details>
+			</details>{% endif %}
 		</div>
 		{% endfor %}
 	</div>
@@ -61,7 +62,7 @@
 <p class="routine-empty">No routines yet. Add one or choose a template below.</p>
 {% endfor %}
 
-<section class="routine-manage" aria-label="Manage routines">
+{% if can('routines.create') %}<section class="routine-manage" aria-label="Manage routines">
 	<div class="routine-manage-panel">
 		<h2>Add a routine</h2>
 		<form method="post" action="{{ url_for('routines.add_routine_route') }}">
@@ -93,4 +94,5 @@
 	</div>
 </section>
 
+{% endif %}
 {% endblock %}

@@ -38,3 +38,17 @@ def observations():
     ), status
 
 
+
+
+@bp.post('/observations/<int:observation_id>/edit')
+def edit_observation_route(observation_id):
+    from flask import abort, flash
+    from services.observations import edit_observation
+    from services.workspaces import require
+    require('observations.edit')
+    result=edit_observation(g.owner_id,observation_id,request.form)
+    if result=='missing': abort(404)
+    if result=='invalid':
+        flash('Observation not updated. Check the activity, date and field lengths.','error')
+    else: flash('Observation updated.','success')
+    return redirect(url_for('observations.observations'))

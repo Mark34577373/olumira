@@ -1,0 +1,6 @@
+You’re invited to {{ workspace_name }} on Olumira.
+A trusted caregiver has invited you to collaborate in their private workspace.
+Sign in with this invited email address and verify your email before accepting.
+Open {{ link }}
+Or paste this invitation code on the acceptance page: {{ code }}
+This invitation expires in {{ minutes }} minutes. If unexpected, ignore it.

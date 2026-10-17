@@ -35,6 +35,13 @@ class PersistenceTests(unittest.TestCase):
 
     def seed(self):
         ensure_workspace('fictional-test-owner')
+        if 'workspace_id' not in {c['name'] for c in inspect(db.engine).get_columns('routines')}:
+            with transaction() as session:
+                routine_id=session.execute(text('SELECT id FROM routines ORDER BY id LIMIT 1')).scalar()
+                session.execute(text("INSERT INTO routine_completions (routine_id,completion_date) VALUES (:id,'2026-10-16')"),{'id':routine_id})
+                session.execute(text("INSERT INTO observations (owner_id,activity,date,notes,mood,tags) VALUES ('fictional-test-owner','Fictional walk','2026-10-16','Test only','Calm','test')"))
+                session.execute(text("INSERT INTO routines (name,category) VALUES ('Legacy test','General')"))
+            return routine_id
         routine = get_routines('fictional-test-owner')[0]
         toggle_routine('fictional-test-owner', routine['id'])
         add_observation('fictional-test-owner', 'Fictional walk', '2026-10-16', 'Test only', 'Calm', 'test')

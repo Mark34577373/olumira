@@ -24,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--baseline', action='store_true')
     args = parser.parse_args()
-    artifacts = ROOT / 'artifacts' / ('before-day16' if args.baseline else 'after-day16')
+    artifacts = ROOT / 'artifacts' / ('before-day21' if args.baseline else 'after-day21')
     artifacts.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as temp:
         app = create_app({'APP_ENV': 'testing', 'DATABASE': str(Path(temp) / 'browser.db')})

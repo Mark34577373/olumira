@@ -13,7 +13,7 @@
 	</div>
 </div>
 
-<section class="observation-form-panel" aria-labelledby="observation-form-title">
+{% if can('observations.create') %}<section class="observation-form-panel" aria-labelledby="observation-form-title">
 	{% if observation_saved %}
 	{{ alert('Observation saved. Your moment is safely recorded.') }}
 	{% endif %}
@@ -68,7 +68,7 @@
 	</form>
 </section>
 
-<section class="saved-observations" aria-labelledby="saved-observations-title">
+{% endif %}<section class="saved-observations" aria-labelledby="saved-observations-title">
 	<div class="saved-observations-header">
 		<div>
 			<p class="eyebrow">JOURNAL</p>
@@ -95,6 +95,8 @@
 				{% endfor %}
 			</div>
 			{% endif %}
+            {% if can('observations.edit') %}<details class="routine-edit"><summary>Edit observation</summary><form method="post" action="{{ url_for('observations.edit_observation_route',observation_id=observation.id) }}" class="workspace-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% for key,label,limit in [('activity','Activity',120),('date','Date',10),('notes','Notes',2000),('mood','Mood',20),('tags','Tags',120)] %}<label for="observation-{{ observation.id }}-{{ key }}">{{ label }}</label><input id="observation-{{ observation.id }}-{{ key }}" type="{{ 'date' if key=='date' else 'text' }}" name="{{ key }}" maxlength="{{ limit }}" value="{{ observation[key] or '' }}" {% if key in ['activity','date'] %}required{% endif %}>{% endfor %}<button class="routine-button">Save changes</button></form></details>{% endif %}
+
 		</article>
 		{% endfor %}
 	</div>

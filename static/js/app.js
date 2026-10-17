@@ -82,7 +82,7 @@ if (resourceFilterRoot) {
 const communicationRoot = document.querySelector("#communication-app");
 
 if (communicationRoot) {
-	const customStorageKey = `olumira.customCommunication.v2.${communicationRoot.dataset.storageScope}`;
+	const customStorageKey = `olumira.customCommunication.v3.${communicationRoot.dataset.storageScope}`;
 	const emptyDisplay = communicationRoot.querySelector("#communication-empty");
 	const messageDisplay = communicationRoot.querySelector("#communication-message");
 	const dialog = communicationRoot.querySelector("#communication-dialog");
@@ -157,6 +157,7 @@ if (communicationRoot) {
 	customOptions.forEach(addCustomOption);
 
 	communicationRoot.querySelector("#open-communication-dialog").addEventListener("click", () => {
+		if (communicationRoot.dataset.canWrite !== 'true') return;
 		dialog.showModal();
 		communicationRoot.querySelector("#communication-name").focus();
 	});
@@ -167,6 +168,7 @@ if (communicationRoot) {
 
 	form.addEventListener("submit", (event) => {
 		event.preventDefault();
+		if (communicationRoot.dataset.canWrite !== 'true') return;
 		const formData = new FormData(form);
 		const option = {
 			id: `custom-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -263,6 +265,14 @@ if (accountLinkForm) {
         entry.hidden = true;
     }
     if (parameters.has('token')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+}
+
+// An invite opened before sign-in must not leave its secret in browser history.
+// The recipient reopens the original email after verifying their account.
+if (!accountLinkForm && document.querySelector('[data-invitation-guidance]')) {
+    if (new URLSearchParams(window.location.hash.slice(1)).has('token')) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 }

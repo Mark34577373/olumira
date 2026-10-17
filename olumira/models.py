@@ -12,6 +12,8 @@ class Routine(db.Model):
     __tablename__ = 'routines'
     __table_args__ = (db.Index('idx_routines_owner', 'owner_id'), {'sqlite_autoincrement': True})
     id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), index=True)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
     owner_id = db.Column(db.Text, nullable=True)
     name = db.Column(db.Text, nullable=False)
     category = db.Column(db.Text, nullable=False)
@@ -21,6 +23,8 @@ class Observation(db.Model):
     __tablename__ = 'observations'
     __table_args__ = (db.Index('idx_observations_owner', 'owner_id'), {'sqlite_autoincrement': True})
     id = db.Column(db.Integer, primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), index=True)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
     owner_id = db.Column(db.Text, nullable=True)
     activity = db.Column(db.Text, nullable=False)
     date = db.Column(db.Text, nullable=False)
@@ -92,6 +96,7 @@ class EmailOutbox(db.Model):
     id = db.Column(db.String(32), primary_key=True)
     user_id = db.Column(db.String(32), db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     token_hash = db.Column(db.String(64), db.ForeignKey('account_tokens.token_hash', ondelete='CASCADE'))
+    invitation_id = db.Column(db.String(32), db.ForeignKey('workspace_invitations.id'))
     kind = db.Column(db.String(24), nullable=False)
     encrypted_payload = db.Column(db.Text, nullable=False)
     created_at = db.Column(db.BigInteger, nullable=False)
@@ -101,3 +106,65 @@ class EmailOutbox(db.Model):
     delivered_at = db.Column(db.BigInteger)
     cancelled_at = db.Column(db.BigInteger)
     last_error = db.Column(db.String(32))
+
+
+class FamilyWorkspace(db.Model):
+    __tablename__ = 'family_workspaces'
+    id = db.Column(db.String(32), primary_key=True)
+    name = db.Column(db.String(80), nullable=False)
+    created_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class WorkspaceMembership(db.Model):
+    __tablename__ = 'workspace_memberships'
+    __table_args__ = (db.UniqueConstraint('workspace_id', 'user_id', name='uq_workspace_member'),
+        db.CheckConstraint("role IN ('owner','caregiver','viewer')", name='ck_membership_role'),
+        db.CheckConstraint("status IN ('active','revoked')", name='ck_membership_status'))
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False, index=True)
+    user_id = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False, index=True)
+    role = db.Column(db.String(16), nullable=False)
+    status = db.Column(db.String(16), nullable=False, default='active')
+    joined_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class CareProfile(db.Model):
+    __tablename__ = 'care_profiles'
+    __table_args__ = (db.UniqueConstraint('id', 'workspace_id', name='uq_profile_workspace'),)
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False, index=True)
+    display_name = db.Column(db.String(80), nullable=False)
+    avatar = db.Column(db.String(16), nullable=False, default='leaf')
+    communication = db.Column(db.String(500), nullable=False, default='')
+    routine_preferences = db.Column(db.String(500), nullable=False, default='')
+    interests = db.Column(db.String(500), nullable=False, default='')
+    support_notes = db.Column(db.String(1000), nullable=False, default='')
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class WorkspaceInvitation(db.Model):
+    __tablename__ = 'workspace_invitations'
+    __table_args__ = (db.CheckConstraint("role IN ('caregiver','viewer')", name='ck_invitation_role'),)
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False, index=True)
+    email = db.Column(db.String(254), nullable=False)
+    role = db.Column(db.String(16), nullable=False)
+    invited_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    created_at = db.Column(db.BigInteger, nullable=False)
+    expires_at = db.Column(db.BigInteger, nullable=False)
+    accepted_at = db.Column(db.BigInteger)
+    revoked_at = db.Column(db.BigInteger)
+
+
+class AuditEvent(db.Model):
+    __tablename__ = 'audit_events'
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False, index=True)
+    actor_id = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    event_type = db.Column(db.String(48), nullable=False)
+    target_id = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)

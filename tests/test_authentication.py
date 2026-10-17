@@ -213,7 +213,7 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(observation.owner_id, other_owner)
             self.assertEqual(db.session.get(Routine, first_routine).name, 'Wake up')
         html = self.client.get('/communication').text
-        self.assertIn(f'data-storage-scope="{other_id}"', html)
+        self.assertIn(f'data-storage-scope="{other_id}.{other_owner}.workspace"', html)
         self.assertNotIn(f'data-storage-scope="{first_id}"', html)
 
     def test_rate_limits_ip_account_and_registration(self):

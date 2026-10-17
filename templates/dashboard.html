@@ -35,7 +35,7 @@
 				<form class="task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="return_to" value="dashboard">
-					<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
+					<button {% if not can('routines.complete') %}disabled{% endif %} type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
 						<span class="task-visual">{{ icon('sun' if category == 'Morning' else 'calendar') }}</span><span>{{ routine['name'] }}</span>
 					</button>

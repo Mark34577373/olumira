@@ -31,10 +31,10 @@ For a **new, empty local database**:
 
 ```sh
 venv/bin/python -m flask --app app db upgrade
-venv/bin/python -m flask --app app run --port 5050
+venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5050. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0003`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0006`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -135,3 +135,23 @@ Build with `pip install -r requirements.txt`. Before deploying, configure a stab
 ## Verification and remaining work
 
 [Day 16 recovery checkpoint](docs/day-16-account-recovery.md) records current behavior, private email previews, SMTP-worker setup, migrations, verification results, and deployment/recovery gates. The [Day 15 checkpoint](docs/day-15-authentication.md) is the historical authentication foundation. Historical [Days 12–14 checkpoints](docs/days-12-14.md) record actual test results, changed files, known limitations, and suggested milestone commit messages. Browser checks do not establish formal WCAG compliance; assistive-technology and broader browser testing remain necessary. Production credentials and a disposable PostgreSQL test instance are still required to verify the PostgreSQL path before deployment.
+
+## Days 17–21: family workspaces and collaboration
+
+Private workspaces now support multiple caregivers, personalized care profiles,
+secure invitations, owner/caregiver/viewer permissions and immutable activity events.
+Choose a workspace and optional profile using the horizontal context controls.
+Workspace settings provide profile, invitation and membership management. Owners
+cannot be removed/demoted; ownership transfer and workspace deletion are unavailable.
+
+Read the [implementation and demo guide](docs/days-17-21.md) and
+[workspace security review](docs/workspace-security-review.md) for the permission
+matrix, migration/backup procedure, tests, operational gates and remaining findings.
+Migration head is **0006**; migrate before running this application version. Existing
+account-linked records receive private workspaces; unclaimed legacy records remain
+quarantined. No production deployment or public caregiver onboarding was performed.
+
+Use `venv/bin/python -m pytest tests -q` for automated checks and
+`venv/bin/python tests/browser/check_workspaces.py` for a temporary fictional browser
+demo. Email verification and invitations use private `.eml` previews in development;
+actual inbox delivery requires SMTP configuration and the explicit outbox worker.

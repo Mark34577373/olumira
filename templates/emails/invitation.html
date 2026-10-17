@@ -1,0 +1,8 @@
+{% extends 'emails/base.html' %}{% block content %}
+<h1>You’re invited to {{ workspace_name }}</h1>
+<p>A caregiver has invited you to collaborate in a private Olumira workspace.</p>
+<p>Sign in using this invited email address and verify your email before accepting.</p>
+<p><a href="{{ link }}">Review your invitation</a></p>
+<p>Or paste this code on the acceptance page: <strong>{{ code }}</strong></p>
+<p>Expires in {{ minutes }} minutes. If unexpected, ignore this email.</p>
+{% endblock %}
