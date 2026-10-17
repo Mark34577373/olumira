@@ -239,8 +239,7 @@ window.addEventListener('pageshow', (event) => {
     if (event.persisted && document.body.dataset.authenticated === 'true') window.location.reload();
 });
 
-const accountMenu = document.querySelector('.account-menu');
-if (accountMenu) {
+document.querySelectorAll('.account-menu').forEach((accountMenu) => {
     accountMenu.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
             accountMenu.open = false;
@@ -250,7 +249,7 @@ if (accountMenu) {
     document.addEventListener('click', (event) => {
         if (!accountMenu.contains(event.target)) accountMenu.open = false;
     });
-}
+});
 
 
 // Link secrets stay out of HTTP URLs, browser storage, and subsequent history entries.

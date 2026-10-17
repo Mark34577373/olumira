@@ -8,7 +8,7 @@ from alembic.migration import MigrationContext
 from alembic.autogenerate import compare_metadata
 from olumira import create_app
 from olumira.extensions import db
-from support import create_user
+from support import create_historical_user as create_user
 
 
 class ScheduleMigrationTests(unittest.TestCase):

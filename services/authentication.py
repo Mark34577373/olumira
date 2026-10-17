@@ -80,7 +80,7 @@ def authenticate(email: str, password: str):
     candidate = password if usable_password else ''
     checked_version = user.auth_version if user else None
     valid = check_password_hash(user.password_hash if user else dummy_password_hash(), candidate)
-    if not user or not valid or not usable_password:
+    if not user or user.closed_at is not None or not valid or not usable_password:
         return None
     if user.password_hash.split('$', 1)[0] != PASSWORD_METHOD:
         with transaction() as store:
@@ -114,7 +114,7 @@ def start_session(user):
     token, issued = secrets.token_urlsafe(32), int(time.time())
     with transaction() as store:
         user = store.scalar(select(User).where(User.id == user_id).with_for_update().execution_options(populate_existing=True))
-        if user is None or expected_version is None or user.auth_version != expected_version:
+        if user is None or user.closed_at is not None or expected_version is None or user.auth_version != expected_version:
             return False
         store.add(AuthSession(token_hash=token_digest(token), user_id=user.id, auth_version=user.auth_version,
                               created_at=issued, expires_at=issued + current_app.config['AUTH_SESSION_SECONDS'], last_seen_at=issued))
@@ -146,7 +146,7 @@ def load_user(user_id):
         session.clear()
         return None
     user = db.session.get(User, user_id)
-    if user is None or user.auth_version != record.auth_version:
+    if user is None or user.closed_at is not None or user.auth_version != record.auth_version:
         g.auth_expired = True
         session.clear()
         return None

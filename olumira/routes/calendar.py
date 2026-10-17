@@ -48,7 +48,10 @@ def fields(row=None):
 @bp.get("/calendar")
 def calendar():
     values = request.args.to_dict()
-    values.setdefault("view", session.get("calendar_view", "month"))
+    from services.personal_settings import get
+    pref = get()
+    values.setdefault("view", pref.calendar_view)
+    values["week_start"] = pref.week_start
     try:
         period = service.window(values)
         rows = service.events(
@@ -96,6 +99,7 @@ def calendar():
         types=service.TYPES,
         kind=values.get("type", ""),
         visibility=values.get("status", "active"),
+        clock_format="%I:%M %p %Z" if pref.time_format == "12" else "%H:%M %Z",
         reminders=reminders,
     )
 

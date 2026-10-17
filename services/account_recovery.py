@@ -56,7 +56,7 @@ def request_link(email, purpose):
     with transaction():
         user_id = db.session.scalar(select(User.id).where(User.email == normalized))
         user = _user(user_id) if user_id else None
-        if user and (purpose != 'verify_email' or not user.email_verified):
+        if user and user.closed_at is None and (purpose != 'verify_email' or not user.email_verified):
             _issue(user, purpose, user.email)
         else:
             _cover_work()
@@ -78,7 +78,7 @@ def _valid_token(raw, purpose):
         return None, None
     user = _user(initial.user_id)
     token = _lookup(raw, purpose, lock=True)
-    if (not user or not token or token.used_at is not None or token.expires_at <= int(time.time()) or
+    if (not user or user.closed_at is not None or not token or token.used_at is not None or token.expires_at <= int(time.time()) or
             token.auth_version != user.auth_version):
         return None, None
     return user, token

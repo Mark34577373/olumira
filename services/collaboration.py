@@ -155,6 +155,7 @@ def accept_invitation(raw):
         moment = int(time.time())
         if (
             not user
+            or user.closed_at is not None
             or not user.email_verified
             or not invitation
             or invitation.email != user.email

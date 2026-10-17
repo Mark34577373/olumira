@@ -9,7 +9,7 @@ from alembic.migration import MigrationContext
 from olumira import create_app
 from olumira.extensions import db
 from olumira.models import CommunicationBoard, CommunicationCard
-from support import create_user
+from support import create_historical_user as create_user
 
 
 class CommunicationMigrationTests(unittest.TestCase):
@@ -25,6 +25,8 @@ class CommunicationMigrationTests(unittest.TestCase):
             )
             with app.app_context():
 
+                original_columns = {}
+
                 def snapshot():
                     with db.engine.connect() as connection:
                         return {
@@ -32,7 +34,24 @@ class CommunicationMigrationTests(unittest.TestCase):
                                 [
                                     tuple(r)
                                     for r in connection.execute(
-                                        text('SELECT * FROM "' + name + '"')
+                                        text(
+                                            "SELECT "
+                                            + ",".join(
+                                                '"' + col + '"'
+                                                for col in original_columns.setdefault(
+                                                    name,
+                                                    [
+                                                        column["name"]
+                                                        for column in inspect(
+                                                            connection
+                                                        ).get_columns(name)
+                                                    ],
+                                                )
+                                            )
+                                            + ' FROM "'
+                                            + name
+                                            + '"'
+                                        )
                                     )
                                 ],
                                 key=repr,

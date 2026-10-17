@@ -7,6 +7,7 @@ from sqlalchemy import select, update
 from olumira.extensions import db
 from olumira.models import (
     FamilyWorkspace,
+    User,
     WorkspaceMembership,
     CareProfile,
     AuditEvent,
@@ -71,6 +72,7 @@ def memberships(user_id):
         .where(
             WorkspaceMembership.user_id == user_id,
             WorkspaceMembership.status == "active",
+            FamilyWorkspace.closed_at.is_(None),
         )
         .order_by(FamilyWorkspace.created_at, FamilyWorkspace.id)
     ).all()
@@ -89,10 +91,12 @@ def lock_workspace(workspace_id):
 def membership(workspace_id, user_id):
     return db.session.scalar(
         select(WorkspaceMembership)
+        .join(FamilyWorkspace)
         .where(
             WorkspaceMembership.workspace_id == workspace_id,
             WorkspaceMembership.user_id == user_id,
             WorkspaceMembership.status == "active",
+            FamilyWorkspace.closed_at.is_(None),
         )
         .execution_options(populate_existing=True)
     )
@@ -157,6 +161,17 @@ def resolve_context():
 
 
 def create_workspace(user_id, name, *, workspace_id=None):
+    # Serialize a new ownership relationship with account closure. A request
+    # authenticated just before closure must not create an inaccessible family.
+    if (
+        db.session.scalar(
+            select(User.id)
+            .where(User.id == user_id, User.closed_at.is_(None))
+            .with_for_update()
+        )
+        is None
+    ):
+        abort(403)
     name = (name or "").strip()
     if not name or len(name) > 80 or any(ord(c) < 32 for c in name):
         raise ValueError("Use a workspace name of 1–80 characters.")
@@ -209,18 +224,35 @@ def care_audit(event_type, target_id=None):
 
 
 def profile_values(values):
-    limits=dict(display_name=80,communication=500,routine_preferences=500,interests=500,support_notes=1000)
-    clean={key:(values.get(key) or '').strip() for key in limits}
-    if not clean['display_name'] or any(len(clean[key])>limit or any(ord(c)<32 and c not in '\n\r\t' for c in clean[key]) for key,limit in limits.items()):
-        raise ValueError('Enter a nickname up to 80 characters; preferences and interests allow 500, support notes 1,000.')
-    clean['avatar']=values.get('avatar','leaf')
-    if clean['avatar'] not in ['leaf','sun','flower','star']: raise ValueError('Choose a built-in profile illustration.')
+    limits = dict(
+        display_name=80,
+        communication=500,
+        routine_preferences=500,
+        interests=500,
+        support_notes=1000,
+    )
+    clean = {key: (values.get(key) or "").strip() for key in limits}
+    if not clean["display_name"] or any(
+        len(clean[key]) > limit
+        or any(ord(c) < 32 and c not in "\n\r\t" for c in clean[key])
+        for key, limit in limits.items()
+    ):
+        raise ValueError(
+            "Enter a nickname up to 80 characters; preferences and interests allow 500, support notes 1,000."
+        )
+    clean["avatar"] = values.get("avatar", "leaf")
+    if clean["avatar"] not in ["leaf", "sun", "flower", "star"]:
+        raise ValueError("Choose a built-in profile illustration.")
     return clean
 
 
 def create_profile(values):
-    require('profiles.create',lock=True)
+    require("profiles.create", lock=True)
     with transaction():
-        row=CareProfile(id=uuid.uuid4().hex,workspace_id=g.workspace_id,**profile_values(values))
-        db.session.add(row);db.session.flush();care_audit('profile.created',row.id)
+        row = CareProfile(
+            id=uuid.uuid4().hex, workspace_id=g.workspace_id, **profile_values(values)
+        )
+        db.session.add(row)
+        db.session.flush()
+        care_audit("profile.created", row.id)
         return row

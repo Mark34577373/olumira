@@ -213,6 +213,19 @@ def save_task(values, identity=None):
         )
         if changed_assignee:
             care_audit("care.task_assigned", task.id)
+            if assignee:
+                from services.notifications import emit
+
+                emit(
+                    assignee,
+                    g.workspace_id,
+                    profile_id,
+                    "task",
+                    "task",
+                    task.id,
+                    f"task:{task.id}:assignment:{task.version}",
+                    "assigned",
+                )
         result = task.id, profile_id
     return result
 
@@ -387,6 +400,18 @@ def create_handoff(values, task_ids):
         db.session.flush()
         for uid in recipients:
             db.session.add(Recipient(handoff_id=identity, user_id=uid))
+            from services.notifications import emit
+
+            emit(
+                uid,
+                g.workspace_id,
+                profile_id,
+                "handoff",
+                "handoff",
+                identity,
+                "handoff:" + identity,
+                "handoff",
+            )
         for task in tasks:
             db.session.add(HandoffTask(handoff_id=identity, task_id=task.id))
         care_audit("care.handoff_created", identity)
@@ -405,6 +430,18 @@ def acknowledge(identity):
             return
         recipient.acknowledged_at = utcnow()
         care_audit("care.handoff_acknowledged", identity)
+        from services.notifications import emit
+
+        emit(
+            handoff.created_by,
+            g.workspace_id,
+            handoff.profile_id,
+            "handoff",
+            "handoff",
+            identity,
+            f"ack:{identity}:{current_user.id}",
+            "acknowledged",
+        )
 
 
 def recipients_for(ids):

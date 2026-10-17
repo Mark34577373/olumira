@@ -68,6 +68,7 @@ def utcnow():
 
 
 class User(UserMixin, db.Model):
+    closed_at = db.Column(db.DateTime(timezone=True))
     __tablename__ = 'users'
     __table_args__ = (
         db.UniqueConstraint('email', name='uq_users_email'),
@@ -129,6 +130,7 @@ class EmailOutbox(db.Model):
 
 
 class FamilyWorkspace(db.Model):
+    closed_at = db.Column(db.DateTime(timezone=True))
     __tablename__ = 'family_workspaces'
     id = db.Column(db.String(32), primary_key=True)
     name = db.Column(db.String(80), nullable=False)
@@ -591,3 +593,93 @@ class OnboardingState(db.Model):
     completed_at=db.Column(db.DateTime(timezone=True))
     skipped_at=db.Column(db.DateTime(timezone=True))
     legacy_exempt=db.Column(db.Boolean,nullable=False,default=False)
+
+
+class UserPreference(db.Model):
+    __tablename__ = "user_preferences"
+    user_id = db.Column(db.String(32), db.ForeignKey("users.id"), primary_key=True)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    larger_text = db.Column(db.Boolean, nullable=False, default=False)
+    reduced_motion = db.Column(db.Boolean, nullable=False, default=False)
+    enhanced_contrast = db.Column(db.Boolean, nullable=False, default=False)
+    simplified = db.Column(db.Boolean, nullable=False, default=False)
+    reduced_effects = db.Column(db.Boolean, nullable=False, default=False)
+    calendar_view = db.Column(db.String(10), nullable=False, default="month")
+    week_start = db.Column(db.String(6), nullable=False, default="monday")
+    time_format = db.Column(db.String(2), nullable=False, default="24")
+
+
+class Notification(db.Model):
+    __tablename__ = "notifications"
+    id = db.Column(db.String(32), primary_key=True)
+    user_id = db.Column(
+        db.String(32), db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), nullable=False, index=True
+    )
+    profile_id = db.Column(db.String(32), db.ForeignKey("care_profiles.id"))
+    category = db.Column(db.String(16), nullable=False)
+    entity_type = db.Column(db.String(16), nullable=False)
+    entity_id = db.Column(db.String(120), nullable=False)
+    title = db.Column(db.String(100), nullable=False)
+    dedup_key = db.Column(db.String(64), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    read_at = db.Column(db.DateTime(timezone=True))
+    dismissed_at = db.Column(db.DateTime(timezone=True))
+    __table_args__ = (
+        db.Index(
+            "ix_notification_inbox",
+            "user_id",
+            "workspace_id",
+            "dismissed_at",
+            "read_at",
+            "created_at",
+        ),
+        db.ForeignKeyConstraint(
+            ["profile_id", "workspace_id"],
+            ["care_profiles.id", "care_profiles.workspace_id"],
+        ),
+        db.ForeignKeyConstraint(
+            ["workspace_id", "user_id"],
+            ["workspace_memberships.workspace_id", "workspace_memberships.user_id"],
+        ),
+        db.CheckConstraint("category IN ('task','handoff','routine','event')"),
+    )
+
+
+class NotificationPreference(db.Model):
+    __tablename__ = "notification_preferences"
+    user_id = db.Column(db.String(32), db.ForeignKey("users.id"), primary_key=True)
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), primary_key=True
+    )
+    categories = db.Column(
+        db.String(100), nullable=False, default="task,handoff,routine,event"
+    )
+    retention_days = db.Column(db.Integer, nullable=False, default=90)
+    version = db.Column(db.Integer, nullable=False, default=1)
+
+
+class DataExport(db.Model):
+    __tablename__ = "data_exports"
+    id = db.Column(db.String(32), primary_key=True)
+    user_id = db.Column(
+        db.String(32), db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    workspace_id = db.Column(db.String(32), db.ForeignKey("family_workspaces.id"))
+    scope = db.Column(db.String(12), nullable=False)
+    token_hash = db.Column(db.String(64), nullable=False, unique=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    expires_at = db.Column(db.BigInteger, nullable=False, index=True)
+    consumed_at = db.Column(db.BigInteger)
+
+
+class DeletionRequest(db.Model):
+    __tablename__ = "deletion_requests"
+    id = db.Column(db.String(32), primary_key=True)
+    user_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
+    workspace_id = db.Column(db.String(32), db.ForeignKey("family_workspaces.id"))
+    scope = db.Column(db.String(12), nullable=False)
+    status = db.Column(db.String(32), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)

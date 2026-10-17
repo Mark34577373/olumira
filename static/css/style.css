@@ -2078,3 +2078,23 @@ body.board-focus-mode main {padding-top:12px}body.board-focus-mode .board-use-he
 .product-tour{border:2px solid #28674f;background:#edf6ef}.nav-links a.tour-highlight{outline:3px solid #9a652e;outline-offset:2px}.setup-step[aria-busy=true]{opacity:.85}.premium-empty{padding:28px;background:#fff;border:1px solid #dce8e1;border-radius:18px}.premium-empty .empty-mark{font-size:2rem;color:#28674f}
 
 .recent-section a:not(.routine-button),main>.journal-actions a:not(.routine-button){color:#215a46}.calendar-short-date,.calendar-mobile-count{display:none}@media(max-width:1050px){.calendar-month{grid-template-columns:repeat(7,minmax(0,1fr))}}@media(max-width:700px){.calendar-month{gap:4px;grid-template-columns:repeat(7,minmax(0,1fr))}.calendar-month .calendar-day{padding:5px;min-height:76px;border-radius:8px}.calendar-month .calendar-long-date,.calendar-month .unified-event,.calendar-month .auth-hint{display:none}.calendar-month .calendar-short-date,.calendar-month .calendar-mobile-count{display:block}.calendar-month h2{font-size:1rem;margin:0}.calendar-month .calendar-mobile-count{font-size:.7rem;margin:0}.calendar-month .calendar-day h2 a{display:flex;align-items:center;justify-content:center;min-height:44px;width:100%;text-decoration:none}.calendar-month .calendar-day{overflow-wrap:normal}.calendar-day h2 a{min-height:44px}}
+
+/* Account display choices preserve the established care palette. */
+html[data-larger-text="true"] {font-size: 120%;}
+html[data-larger-text="true"] main {font-size:1.1em;}
+html[data-reduced-motion="true"] *,html[data-reduced-motion="true"] *::before,html[data-reduced-motion="true"] *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}
+html[data-reduced-effects="true"] * {box-shadow:none!important;text-shadow:none!important;}
+html[data-simplified="true"] .welcome-art,html[data-simplified="true"] .setup-art,html[data-simplified="true"] .empty-mark,html[data-simplified="true"] .brand-dot {display:none;}
+html[data-enhanced-contrast="true"] body {color:#102e24;background:#fff;}
+html[data-enhanced-contrast="true"] main p,html[data-enhanced-contrast="true"] label {color:#102e24;}
+html[data-enhanced-contrast="true"] input,html[data-enhanced-contrast="true"] select,html[data-enhanced-contrast="true"] textarea,html[data-enhanced-contrast="true"] .journal-panel {border:2px solid #215a46;}
+@media (prefers-contrast: more) {input,select,textarea,.journal-panel {border:2px solid #215a46;}}
+
+.settings-sections {display:flex;flex-wrap:wrap;gap:8px;margin:24px 0;}
+.settings-sections a {display:inline-flex;align-items:center;min-height:44px;padding:8px 14px;border:1px solid #b7d0c3;border-radius:12px;color:#215a46;background:#f3f8f5;text-decoration:none;max-width:100%;}
+.settings-sections a:hover {background:#e2eee7;}
+label.preference-toggle {display:flex;align-items:center;gap:12px;min-height:48px;margin:8px 0;line-height:1.5;}
+label.preference-toggle input[type="checkbox"] {flex:0 0 24px;width:24px;height:24px;min-height:24px;margin:0;accent-color:#215a46;}
+@media(prefers-reduced-motion:reduce) {*,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+.settings-sections {flex-direction:row;justify-content:flex-start;text-align:left;}
+.journal-form-grid label.preference-toggle {display:flex;flex-direction:row;align-items:center;justify-content:flex-start;text-align:left;}

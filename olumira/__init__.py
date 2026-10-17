@@ -54,11 +54,11 @@ def create_app(config=None):
 
     csrf.init_app(app)
 
-    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding
-    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding):
+    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy
+    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy):
         app.register_blueprint(module.bp)
 
-    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care', 'calendar', 'onboarding'}
+    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care', 'calendar', 'onboarding', 'settings', 'notifications', 'privacy'}
 
     @login_manager.unauthorized_handler
     def require_login():
@@ -81,7 +81,7 @@ def create_app(config=None):
             return redirect(url_for('auth.verification'))
         from services.workspaces import resolve_context, require
         resolve_context()
-        if request.blueprint != 'workspaces' and not g.workspace_id:
+        if request.blueprint not in {'workspaces', 'privacy'} and not g.workspace_id:
             return redirect(url_for('workspaces.index'))
         if request.method == 'POST' and request.blueprint != 'workspaces':
             permission = {
@@ -122,10 +122,22 @@ def create_app(config=None):
         from services.workspaces import can
         return {'can': can}
 
+    @app.context_processor
+    def personal_display():
+        from flask import has_request_context
+        if has_request_context() and current_user.is_authenticated:
+            from services.personal_settings import get
+            values = {'personal_pref': get(), 'notification_count': 0, 'notification_preview': []}
+            if getattr(g, 'workspace_id', None) and current_user.email_verified:
+                from services.notifications import unread_count, inbox
+                values.update(notification_count=unread_count(), notification_preview=inbox(state='unread')[:3])
+            return values
+        return {'personal_pref': None}
+
     @app.after_request
     def security_headers(response):
         if request.endpoint != 'static':
-            response.headers['Cache-Control'] = 'private, no-store, max-age=0' if request.endpoint=='observations.reports' else 'no-store'
+            response.headers['Cache-Control'] = 'private, no-store, max-age=0' if request.endpoint in {'observations.reports','privacy.download'} else 'no-store'
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'

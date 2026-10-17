@@ -34,7 +34,7 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0018`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0021`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -221,3 +221,23 @@ Days 29–32 add structured observations, the searchable timeline, scoped caregi
 | 36 | **PREMIUM EXPERIENCE PHASE 1: GUIDED ONBOARDING** | Saved setup, first-use guidance and contextual product tour |
 
 Migrate to **0018** and restart the process. No new dependencies or environment variables. See [milestone implementation and operation](docs/day-33-36.md) and [verification/readiness](docs/day-33-36-verification.md). Background reminder delivery remains deferred to Day 38. The fictional interactive preview can be started with `venv/bin/python scripts/preview_routines.py --port 5059`.
+
+
+## Days 37–39: Premium settings, notifications and privacy
+
+Account → Settings & personalization links the existing secure account, dashboard, communication, calendar, workspace and new privacy controls. Personal accessibility settings persist per user. Calendar default view, week start and 12/24-hour clock change presentation only. Light/English are the supported appearance/language; reduced effects, larger text, enhanced contrast and simplified decoration work independently of shared communication preferences.
+
+Migration head **0021** adds personal preferences, notification storage/preferences, expiring download grants and access-closure metadata. Existing care records are preserved. No dependencies or environment variables were added.
+
+Task assignments and handoffs create private in-app notifications in their business transactions. Schedule the following commands using the same database and stable application configuration as the web process:
+
+```sh
+venv/bin/python -m flask --app app process-reminders
+venv/bin/python -m flask --app app privacy-maintenance
+```
+
+Run reminders approximately every minute and privacy maintenance daily. No in-process scheduler is started automatically. On Render, configure a supported scheduled job or external scheduler; a sleeping Free web service is not a reliable worker. The reminder processor is restart-safe, observes saved lead times/categories, and catches up over the preceding 24 hours. Email remains the existing account/invitation channel; reminder email and push are unavailable.
+
+Privacy exports are authenticated, reauthenticated, CSRF-protected JSON with single-use five-minute download grants. Personal exports exclude shared care records; workspace exports require an owner and include all profiles in that workspace. Exports are bounded to 10,000 rows/8 MiB and generated in memory. Account deletion anonymizes identifying account fields and revokes all sessions and memberships, while shared history remains. Sole owners must add another owner or close the workspace first. Workspace closure revokes all access/invitations and records an operator-review request; **it does not physically erase shared history or backups**. No automatic physical purge is claimed.
+
+See [implementation, retention, backup and deployment details](docs/day-37-39.md) and [verification evidence](docs/day-37-39-verification.md). Fictional interactive preview: `venv/bin/python scripts/preview_routines.py --port 5072`. Do not use fictional credentials for real accounts.

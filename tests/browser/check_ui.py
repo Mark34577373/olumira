@@ -182,12 +182,12 @@ def main():
                     assert not fallback.evaluate('document.documentElement.scrollWidth > innerWidth')
                     nojs.close()
                     # Account-menu keyboard support and CSRF-protected logout.
-                    page.locator('.account-menu summary').focus()
+                    page.locator('.account-menu:not(.notification-menu) summary').focus()
                     page.keyboard.press('Enter')
-                    assert page.locator('.account-menu').get_attribute('open') is not None
+                    assert page.locator('.account-menu:not(.notification-menu)').get_attribute('open') is not None
                     page.keyboard.press('Escape')
-                    assert page.locator('.account-menu').get_attribute('open') is None
-                    page.locator('.account-menu summary').click()
+                    assert page.locator('.account-menu:not(.notification-menu)').get_attribute('open') is None
+                    page.locator('.account-menu:not(.notification-menu) summary').click()
                     page.get_by_role('button', name='Sign out', exact=True).click()
                     assert '/auth/login' in page.url
                     page.goto(origin + '/observations')
@@ -235,6 +235,8 @@ def main():
 if __name__ == '__main__':
     try:
         main()
-    except Exception:
-        print('Browser check failed; details redacted to keep account-link codes out of logs.')
+    except Exception as error:
+        import traceback
+        frames=[frame for frame in traceback.extract_tb(error.__traceback__) if Path(frame.filename).resolve()==Path(__file__).resolve()]
+        print('Browser check failed:',type(error).__name__,'at script lines',[frame.lineno for frame in frames],'; private values redacted.')
         sys.exit(1)

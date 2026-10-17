@@ -1,6 +1,6 @@
 {% from "components/ui.html" import icon %}
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en"{% if personal_pref %}{% for field in ['larger_text','reduced_motion','enhanced_contrast','simplified','reduced_effects'] %} data-{{ field|replace('_','-') }}="{{ 'true' if personal_pref[field] else 'false' }}"{% endfor %}{% endif %}>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -26,12 +26,13 @@
             {% endfor %}
         </div>
         {% endif %}
+        {% if current_user.email_verified and g.workspace_id|default(None) %}<details class="account-menu notification-menu"><summary aria-label="Notifications, {{ notification_count|default(0) }} unread">{{ icon('bell') }} <span>{{ notification_count|default(0) }}</span></summary><div class="account-panel"><a href="{{ url_for('notifications.index') }}">All notifications</a>{% for row in notification_preview|default([]) %}<p>{{ row.title }}</p>{% else %}<p>No unread notifications.</p>{% endfor %}</div></details>{% endif %}
         <details class="account-menu">
             <summary aria-label="Account menu">{{ icon('person') }}<span>Account</span></summary>
             <div class="account-panel">
                 <p class="account-name">{{ current_user.display_name }}</p>
                 <p class="auth-hint">Email {{ 'verified' if current_user.email_verified else 'not verified' }}</p>
-                <a class="text-link" href="{{ url_for('auth.settings') }}">Account settings</a>{% if current_user.email_verified and g.workspace_id|default(None) %}<a href="{{ url_for('onboarding.setup') }}">Guided setup</a><a href="{{ url_for('onboarding.tour') }}">Product tour</a>{% endif %}
+                <a class="text-link" href="{{ url_for('auth.settings') }}">Account settings</a>{% if current_user.email_verified %}<a href="{{ url_for('settings.settings') }}">Settings & personalization</a>{% endif %}{% if current_user.email_verified and g.workspace_id|default(None) %}<a href="{{ url_for('onboarding.setup') }}">Guided setup</a><a href="{{ url_for('onboarding.tour') }}">Product tour</a>{% endif %}
                 <form method="post" action="{{ url_for('auth.logout') }}">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="routine-button">Sign out</button>

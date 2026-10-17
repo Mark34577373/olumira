@@ -190,6 +190,11 @@ def transfer_sqlite(source, backup):
             "resource_bookmarks",
             "dashboard_preferences",
             "onboarding_states",
+            "user_preferences",
+            "notifications",
+            "notification_preferences",
+            "data_exports",
+            "deletion_requests",
         ):
             if (
                 table in tables
@@ -248,7 +253,7 @@ def transfer_sqlite(source, backup):
         if connection.dialect.name == "postgresql":
             connection.execute(
                 text(
-                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks, calendar_events, reminder_preferences, resources, resource_bookmarks, dashboard_preferences, onboarding_states IN ACCESS EXCLUSIVE MODE"
+                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks, calendar_events, reminder_preferences, resources, resource_bookmarks, dashboard_preferences, onboarding_states, user_preferences, notifications, notification_preferences, data_exports, deletion_requests IN ACCESS EXCLUSIVE MODE"
                 )
             )
         elif connection.dialect.name == "sqlite":
@@ -261,7 +266,7 @@ def transfer_sqlite(source, backup):
             or connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
-            != "0018"
+            != "0021"
         ):
             raise ValueError(
                 "Destination must be migrated to the supported revision first"

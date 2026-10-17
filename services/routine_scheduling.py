@@ -403,6 +403,9 @@ def calendar(start, days, display_zone):
                     local_time=revision.local_time,
                     session_id=None,
                     status="Scheduled",
+                    reminder_eligible=schedule.state == "active"
+                    and revision.number == schedule.revision
+                    and not routine.archived_at,
                     completed=0,
                     total=0,
                     overlap=False,
@@ -458,6 +461,7 @@ def calendar(start, days, display_zone):
             local_time=occ.local_time,
             session_id=run.id,
             status=run.status.title(),
+            reminder_eligible=False,
             completed=done,
             total=total,
             overlap=False,

@@ -223,15 +223,20 @@ def window(values):
     view = values.get("view", "month")
     if view not in VIEWS:
         raise ValueError("Choose month, week, day or agenda.")
+    week_start = 6 if values.get("week_start") == "sunday" else 0
     if view == "month":
         first = day.replace(day=1)
-        start = first - timedelta(days=first.weekday())
+        start = first - timedelta(days=(first.weekday() - week_start) % 7)
         days = 42
         previous = (first - timedelta(days=1)).replace(day=1)
         following = (first.replace(day=28) + timedelta(days=4)).replace(day=1)
     else:
         days = {"week": 7, "day": 1, "agenda": 14}[view]
-        start = day - timedelta(days=day.weekday()) if view == "week" else day
+        start = (
+            day - timedelta(days=(day.weekday() - week_start) % 7)
+            if view == "week"
+            else day
+        )
         previous = day - timedelta(days=days)
         following = day + timedelta(days=days)
     return dict(
@@ -256,7 +261,17 @@ def events(start, days, tz, kind="", include_inactive=False, assigned_only=False
     )
     result = []
 
-    def add(identity, title, instant, end, kind, url, status="active", all_day=False):
+    def add(
+        identity,
+        title,
+        instant,
+        end,
+        kind,
+        url,
+        status="active",
+        all_day=False,
+        reminder_eligible=True,
+    ):
         if len(result) >= 3000:
             raise ValueError(
                 "More than 3,000 events match. Choose a shorter view or event type."
@@ -272,6 +287,7 @@ def events(start, days, tz, kind="", include_inactive=False, assigned_only=False
                 url=url,
                 status=status,
                 all_day=all_day,
+                reminder_eligible=reminder_eligible,
             )
         )
 
@@ -294,6 +310,7 @@ def events(start, days, tz, kind="", include_inactive=False, assigned_only=False
                     )
                 ),
                 row["status"],
+                reminder_eligible=row["reminder_eligible"],
             )
     if kind in ["", "task"]:
         query = select(Task).where(
@@ -446,6 +463,7 @@ def reminders(display_zone=None):
         row
         for row in rows
         if row["kind"] in pref.categories.split(",")
+        and row["reminder_eligible"]
         and row["status"].lower() not in ["completed", "canceled", "archived"]
         and row["instant"] <= now + timedelta(minutes=pref.lead_minutes)
         and (

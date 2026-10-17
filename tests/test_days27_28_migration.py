@@ -16,7 +16,7 @@ from olumira.models import (
     CommunicationPreference,
     FavoriteCommunicationCard,
 )
-from support import create_user
+from support import create_historical_user as create_user
 
 
 class PersonalizationCareMigrationTests(unittest.TestCase):
@@ -61,6 +61,8 @@ class PersonalizationCareMigrationTests(unittest.TestCase):
                 db.session.add(card)
                 db.session.commit()
 
+                original_columns = {}
+
                 def snapshot():
                     with db.engine.connect() as connection:
                         return {
@@ -68,7 +70,24 @@ class PersonalizationCareMigrationTests(unittest.TestCase):
                                 [
                                     tuple(row)
                                     for row in connection.execute(
-                                        text('SELECT * FROM "' + name + '"')
+                                        text(
+                                            "SELECT "
+                                            + ",".join(
+                                                '"' + col + '"'
+                                                for col in original_columns.setdefault(
+                                                    name,
+                                                    [
+                                                        column["name"]
+                                                        for column in inspect(
+                                                            connection
+                                                        ).get_columns(name)
+                                                    ],
+                                                )
+                                            )
+                                            + ' FROM "'
+                                            + name
+                                            + '"'
+                                        )
                                     )
                                 ],
                                 key=repr,

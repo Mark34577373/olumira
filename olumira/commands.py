@@ -8,6 +8,28 @@ from services.data_transfer import backup_sqlite, read_snapshot, transfer_sqlite
 
 
 def register_commands(app):
+    @app.cli.command('privacy-maintenance')
+    def privacy_maintenance():
+        """Expire private download grants and apply inbox retention. No care-history purge."""
+        from services.privacy import cleanup
+        try:
+            removed = cleanup()
+        except Exception:
+            db.session.rollback()
+            raise click.ClickException('Privacy maintenance failed. No private record details were logged.') from None
+        click.echo(f'Removed {removed} expired grants or read/dismissed notifications.')
+
+    @app.cli.command('process-reminders')
+    def reminder_command():
+        """Generate durable in-app reminders; safe to repeat after interrupted runs."""
+        from services.notifications import process_reminders
+        try:
+            count = process_reminders(app)
+        except Exception:
+            db.session.rollback()
+            raise click.ClickException('Reminder processing failed; retry after checking configuration. Private records were not logged.') from None
+        click.echo(f'Created {count} in-app reminders.')
+
     @app.cli.command('backup-sqlite')
     @click.option('--source', required=True, type=click.Path(exists=True, dir_okay=False))
     @click.option('--backup', required=True, type=click.Path(dir_okay=False))
