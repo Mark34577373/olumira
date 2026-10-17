@@ -26,16 +26,20 @@ if (resourceFilterRoot) {
 	const detailCopy = document.querySelector("#resource-detail-copy");
 	const backButton = document.querySelector("#resource-back-button");
 
+	let detailTrigger = null;
 	const showDetail = (category, title, copy) => {
+        detailTrigger = document.activeElement;
 		detailCategory.textContent = category.toUpperCase();
 		detailTitle.textContent = title;
 		detailCopy.textContent = copy;
 		detailPanel.hidden = false;
+        detailPanel.focus({ preventScroll: true });
 		detailPanel.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 	};
 
-	const hideDetail = () => {
+	const hideDetail = (restoreFocus = false) => {
 		detailPanel.hidden = true;
+        if (restoreFocus && detailTrigger && detailTrigger.isConnected) detailTrigger.focus();
 	};
 
 	buttons.forEach((button) => {
@@ -57,6 +61,7 @@ if (resourceFilterRoot) {
 		const openCard = () => showDetail(card.dataset.category, card.dataset.title, card.dataset.copy);
 		card.addEventListener("click", openCard);
 		card.addEventListener("keydown", (event) => {
+            if (event.target !== card) return;
 			if (event.key === "Enter" || event.key === " ") {
 				event.preventDefault();
 				openCard();
@@ -71,7 +76,7 @@ if (resourceFilterRoot) {
 		});
 	});
 
-	backButton.addEventListener("click", hideDetail);
+	backButton.addEventListener("click", () => hideDetail(true));
 }
 
 const communicationRoot = document.querySelector("#communication-app");

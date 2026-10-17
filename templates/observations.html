@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import alert, input_field, button %}
 
 {% block title %}Observations | Olumira{% endblock %}
 
@@ -14,9 +15,10 @@
 
 <section class="observation-form-panel" aria-labelledby="observation-form-title">
 	{% if observation_saved %}
-	<p class="observation-form-status" role="status">Observation saved to the database.</p>
+	{{ alert('Observation saved. Your moment is safely recorded.') }}
 	{% endif %}
 
+    {% if observation_error %}{{ alert(observation_error, 'error') }}{% endif %}
 	<div class="observation-form-heading">
 		<div class="observation-form-mark" aria-hidden="true">✎</div>
 		<div>
@@ -25,12 +27,9 @@
 		</div>
 	</div>
 
-	<form class="observation-form" method="post" action="{{ url_for('observations') }}">
+	<form class="observation-form" method="post" action="{{ url_for('observations.observations') }}">
 		<div class="observation-form-grid">
-			<div class="observation-field observation-field-wide">
-				<label for="observation-activity">Activity</label>
-				<input id="observation-activity" name="activity" type="text" value="{{ form_values['activity'] }}" placeholder="e.g., Outdoor play" required>
-			</div>
+            <div class="observation-field-wide">{{ input_field('observation-activity', 'Activity', 'activity', form_values['activity'], required=true, placeholder='e.g., Outdoor play') }}</div>
 
 			<div class="observation-field">
 				<label for="observation-date">Date</label>
@@ -53,20 +52,17 @@
 
 			<div class="observation-field observation-field-wide">
 				<label for="observation-notes">Notes</label>
-				<textarea id="observation-notes" name="notes" rows="5" placeholder="What happened?" required>{{ form_values['notes'] }}</textarea>
+				<textarea id="observation-notes" name="notes" maxlength="2000" rows="5" placeholder="What happened?" required>{{ form_values['notes'] }}</textarea>
 			</div>
 
 			<div class="observation-field observation-field-wide">
 				<label for="observation-tags">Tags <span class="field-optional">Optional</span></label>
-				<input id="observation-tags" name="tags" type="text" value="{{ form_values['tags'] }}" placeholder="Outside, Exploration">
+				<input id="observation-tags" name="tags" maxlength="120" type="text" value="{{ form_values['tags'] }}" placeholder="Outside, Exploration">
 			</div>
 		</div>
 
 		<div class="observation-form-actions">
-			<button type="submit" class="observation-save-button">
-				<span aria-hidden="true">＋</span>
-				Save Observation
-			</button>
+            {{ button('Save observation', 'observation-save-button') }}
 		</div>
 	</form>
 </section>

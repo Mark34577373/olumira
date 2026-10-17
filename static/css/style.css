@@ -74,7 +74,7 @@ nav {
 }
 
 main {
-    width: min(100%, 1240px);
+    width: min(100%, var(--content-width, 1240px));
     margin: 0 auto;
     padding: 38px clamp(20px, 5vw, 64px) 64px;
 }
@@ -1565,7 +1565,7 @@ main {
 /* Days 9–11: shared commercial design system */
 :root {
     --ink: #24362d;
-    --muted: #607168;
+    --muted: #5b6b62;
     --line: #e4ece6;
     --canvas: #f3f8f4;
     --green: #245b46;
@@ -1576,6 +1576,10 @@ main {
     --lavender-soft: #f1ecfc;
     --radius-card: 18px;
     --radius-control: 12px;
+    --text-small: .875rem;
+    --text-body: 1rem;
+    --text-heading: 1.375rem;
+    --content-width: 1400px;
     --space-1: 4px;
     --space-2: 8px;
     --space-3: 12px;
@@ -1591,7 +1595,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .skip-link { position: fixed; top: -100px; left: 16px; z-index: 20; padding: 12px 20px; background: var(--green-deep); color: white; border-radius: var(--radius-control); }
 .skip-link:focus { top: 12px; }
 .site-header { background: var(--surface); border-bottom: 1px solid var(--line); }
-.site-header nav { max-width: 1240px; margin: auto; padding: 0 32px; min-height: 76px; border: 0; gap: 32px; flex-direction: row; }
+.site-header nav { max-width: var(--content-width); margin: auto; padding: 0 32px; min-height: 76px; border: 0; gap: 32px; flex-direction: row; }
 .logo { text-decoration: none; font-size: 27px; letter-spacing: -1px; }
 .brand-dot { color: #7da98c; }
 .nav-links { margin-left: auto; gap: 12px; width: auto; }
@@ -1600,7 +1604,7 @@ button, a, summary { -webkit-tap-highlight-color: transparent; }
 .nav-links a[aria-current="page"]::after { content: ''; position: absolute; bottom: 16px; height: 3px; left: 8px; right: 8px; border-radius: 3px; background: var(--green); }
 .profile-placeholder { display: grid; place-items: center; width: 34px; height: 34px; flex-shrink: 0; border-radius: 50%; background: var(--green-soft); color: var(--green); font-size: 24px; }
 .menu-toggle { min-height: 44px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--surface); color: var(--green); }
-main { max-width: 1240px; padding: 28px 32px 64px; }
+main { max-width: var(--content-width); padding: 28px 32px 64px; }
 .welcome { position: relative; display: flex; align-items: center; min-height: 210px; padding: 30px 32px; margin-bottom: 24px; overflow: hidden; border-radius: var(--radius-card); background: #eaf3ec; }
 .welcome > div { position: relative; z-index: 1; max-width: 65%; }
 .welcome .eyebrow { color: var(--green); font-size: 10px; letter-spacing: 1.4px; margin-bottom: 12px; }
@@ -1707,3 +1711,85 @@ main { max-width: 1240px; padding: 28px 32px 64px; }
 @media (min-width: 801px) {
     .menu-toggle { display: none; }
 }
+
+/* Day 14: readable type, consistent icons, and shared feedback. */
+body { font-size: var(--text-body); line-height: 1.6; }
+.ui-icon { width: 24px; height: 24px; display: block; flex-shrink: 0; }
+.profile-placeholder .ui-icon { width: 19px; height: 19px; }
+.nav-links a { font-size: var(--text-small); }
+.welcome .subtitle { font-size: var(--text-body); max-width: 480px; }
+.welcome .eyebrow { font-size: .75rem; letter-spacing: 1.1px; }
+.welcome { min-height: 225px; }
+.stat-card { padding: 24px; }
+.stat-card h2 { font-size: .9375rem; margin-bottom: 18px; }
+.stat-card p { font-size: var(--text-small); line-height: 1.5; }
+.stat-value strong { font-size: 40px; letter-spacing: -1.5px; }
+.stat-value small { font-size: var(--text-body); letter-spacing: 0; }
+.stat-icon { width: 48px; height: 48px; border-radius: 16px; }
+.stat-icon .ui-icon { width: 25px; height: 25px; }
+.progress-ring { width: 48px; height: 48px; transform: rotate(-90deg); flex-shrink: 0; }
+.progress-ring circle { fill: none; stroke-width: 4; }
+.ring-track { stroke: var(--green-soft); }
+.ring-value { stroke: var(--green); stroke-linecap: round; }
+.card-header h2, .section-header h2, .recent-section h2 { font-size: var(--text-heading); }
+.card-label, .task-group-title { font-size: .75rem; }
+.completion-badge { font-size: var(--text-small); }
+.task, .routine-item { font-size: var(--text-body); min-height: 56px; }
+.task-visual { display: grid; place-items: center; width: 32px; height: 32px; flex: 0 0 auto; color: var(--green); background: var(--green-soft); border-radius: 10px; }
+.task-visual .ui-icon { width: 19px; height: 19px; }
+.task.completed .task-visual { background: var(--surface); }
+.routines-page-progress { margin: 0 0 32px; }
+.action-button { min-height: 154px; padding: 20px; gap: 14px; }
+.action-button strong { font-size: var(--text-body); line-height: 1.4; }
+.action-button small { font-size: var(--text-small); line-height: 1.55; margin-top: 5px; }
+.action-button:nth-child(2) > span { color: #315c9c; }
+.action-button:nth-child(3) > span { color: #a15821; }
+.card-link, .text-link { font-size: var(--text-small); min-height: 44px; display: inline-flex; align-items: center; }
+.ui-alert { padding: 14px 16px; margin: 0 0 22px; border-radius: var(--radius-control); border: 1px solid var(--sage); background: var(--green-soft); color: var(--green-deep); font-size: var(--text-small); }
+.ui-alert-error { border-color: #d9aa99; color: #773923; background: var(--coral-soft); }
+.ui-empty { display: flex; flex-direction: column; align-items: flex-start; padding: 24px 0 8px; gap: 8px; color: var(--muted); font-size: var(--text-small); }
+.ui-empty p { margin: 0; }
+.ui-empty .text-link { margin: 0; }
+.empty-icon { padding: 10px; background: var(--green-soft); color: var(--green); border-radius: 50%; }
+.observation-field label, .routine-field label, .communication-dialog label { font-size: var(--text-small); }
+.communication-option-name, .resource-summary, .resource-details, .saved-observation-notes { font-size: .9375rem; }
+.saved-observation-topline, .observation-date, .saved-observation-tags span { font-size: var(--text-small); }
+.add-communication-button, .dialog-submit, .dialog-cancel, .dialog-close { min-height: 44px; border-radius: var(--radius-control); }
+button:disabled { cursor: not-allowed; opacity: .6; }
+button, a { touch-action: manipulation; }
+.error-page { max-width: 760px; margin: 48px auto; padding: 40px; }
+.error-page h1 { color: var(--green-deep); font-size: clamp(26px, 3vw, 36px); line-height: 1.25; }
+.error-page p { overflow-wrap: anywhere; }
+@media (max-width: 1024px) {
+    .stat-card { padding: 20px; }
+    .stat-card h2 { min-height: 45px; margin-bottom: 10px; }
+}
+@media (max-width: 800px) {
+    .welcome { min-height: 210px; }
+    .stat-card h2 { min-height: 0; }
+}
+@media (max-width: 520px) {
+    .welcome { min-height: 240px; }
+    .welcome .subtitle { font-size: .9375rem; max-width: 95%; }
+    .welcome .eyebrow { font-size: .6875rem; }
+    .stat-card { padding: 16px; }
+    .stat-card h2 { font-size: .875rem; min-height: 44px; }
+    .stat-value strong { font-size: 32px; }
+    .stat-value small { font-size: .875rem; }
+    .stat-icon, .progress-ring { width: 36px; height: 36px; }
+    .stat-card p { font-size: .8125rem; }
+    .card-header h2, .section-header h2, .recent-section h2 { font-size: 1.125rem; }
+    .action-button { padding: 14px; }
+    .action-button strong { font-size: .9375rem; }
+    .action-button small { font-size: .875rem; }
+    .task-visual { width: 28px; height: 28px; }
+    .routine-item { padding: 12px; gap: 8px; }
+    .routine-delete { padding: 8px 10px; }
+    .error-page { padding: 24px; margin: 20px auto; }
+}
+
+.eyebrow { color: var(--green); }
+input::placeholder, textarea::placeholder { color: var(--muted); opacity: 1; }
+body :focus-visible { outline: 3px solid var(--green) !important; outline-offset: 3px; }
+.custom-communication-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+@media (max-width: 800px) { .custom-communication-options { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

@@ -7,3 +7,9 @@ Jinja2==3.1.6
 MarkupSafe==3.0.3
 Werkzeug==3.1.9
 tzdata
+# ORM, schema migrations, and production PostgreSQL driver
+Flask-SQLAlchemy==3.1.1
+SQLAlchemy==2.1.5
+Flask-Migrate==4.1.0
+alembic==1.20.0
+psycopg[binary]==3.3.6

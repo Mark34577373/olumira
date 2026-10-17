@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% from "components/ui.html" import card %}
+{% block title %}{{ code }} | Olumira{% endblock %}
+{% block content %}
+{% call card('error-page') %}
+    <p class="eyebrow">OLUMIRA · {{ code }}</p>
+    <h1>{{ heading }}</h1>
+    <p>{{ message }}</p>
+    <a class="card-link" href="{{ url_for('dashboard.dashboard') }}">Return to your dashboard →</a>
+{% endcall %}
+{% endblock %}

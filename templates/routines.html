@@ -1,14 +1,12 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import icon, progress_bar, page_heading, alert %}
 
 {% block title %}Routines | Olumira{% endblock %}
 
 {% block content %}
 
-<div class="page-header">
-	<p class="eyebrow">ROUTINES</p>
-	<h1>Today's routines</h1>
-	<p>{{ completed_routines }} of {{ routine_count }} completed today. Progress starts fresh each day.</p>
-</div>
+{{ page_heading("Today's routines", completed_routines|string ~ ' of ' ~ routine_count|string ~ ' completed today. Progress starts fresh each day.', 'ROUTINES') }}
+{{ progress_bar(progress, 'Today’s routine completion', 'routines-page-progress') }}
 
 {% if error == "limit" %}
 <p class="routine-form-error" role="alert">You've reached the routine limit. Delete one before adding another.</p>
@@ -27,18 +25,18 @@
 		{% for routine in items %}
 		<div class="routine-entry">
 			<div class="routine-row">
-				<form class="task-form routine-task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
+				<form class="task-form routine-task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
 					<input type="hidden" name="return_to" value="routines">
 					<button type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="routine-check" aria-hidden="true">
 							{% if routine['completed'] %}✓{% endif %}
 						</span>
-						<span class="routine-name">{{ routine['name'] }}</span>
+						<span class="task-visual">{{ icon('sun' if category == 'Morning' else 'calendar') }}</span><span class="routine-name">{{ routine['name'] }}</span>
 					</button>
 				</form>
 
 				<div class="routine-actions">
-					<form method="post" action="{{ url_for('delete_routine_route', routine_id=routine['id']) }}" onsubmit="return confirm('Delete this routine?')">
+					<form method="post" action="{{ url_for('routines.delete_routine_route', routine_id=routine['id']) }}" onsubmit="return confirm('Delete this routine?')">
 						<button type="submit" class="routine-delete" aria-label="Delete {{ routine['name'] }}">Delete</button>
 					</form>
 				</div>
@@ -46,7 +44,7 @@
 
 			<details class="routine-edit">
 				<summary>Edit <span class="visually-hidden">{{ routine['name'] }}</span></summary>
-				<form class="routine-edit-form" method="post" action="{{ url_for('edit_routine_route', routine_id=routine['id']) }}">
+				<form class="routine-edit-form" method="post" action="{{ url_for('routines.edit_routine_route', routine_id=routine['id']) }}">
 					<input class="routine-input" name="name" type="text" value="{{ routine['name'] }}" maxlength="80" required aria-label="Routine name">
 					<input class="routine-input" name="category" type="text" value="{{ routine['category'] }}" maxlength="40" list="category-options" aria-label="Category">
 					<button type="submit" class="routine-button">Save</button>
@@ -63,7 +61,7 @@
 <section class="routine-manage" aria-label="Manage routines">
 	<div class="routine-manage-panel">
 		<h2>Add a routine</h2>
-		<form method="post" action="{{ url_for('add_routine_route') }}">
+		<form method="post" action="{{ url_for('routines.add_routine_route') }}">
 			<div class="routine-field">
 				<label for="routine-name">Name</label>
 				<input class="routine-input" id="routine-name" name="name" type="text" maxlength="80" required placeholder="e.g., Go for a walk">
@@ -78,7 +76,7 @@
 
 	<div class="routine-manage-panel">
 		<h2>Add a template</h2>
-		<form method="post" action="{{ url_for('add_template_route') }}">
+		<form method="post" action="{{ url_for('routines.add_template_route') }}">
 			<div class="routine-field">
 				<label for="routine-template">Template</label>
 				<select class="routine-input" id="routine-template" name="template">

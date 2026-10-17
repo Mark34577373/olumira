@@ -21,3 +21,11 @@ database/*.db.*
 
 *.log
 *.tmp
+
+# Local recovery snapshots may contain private records
+database/backups/
+*.sqlite
+*.sqlite3
+.env.*
+!.env.example
+artifacts/

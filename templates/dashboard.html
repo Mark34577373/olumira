@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "components/ui.html" import icon, progress_bar, empty_state, section_header %}
 
 {% block title %}Dashboard | Olumira{% endblock %}
 
@@ -14,22 +15,16 @@
 </section>
 
 <section class="stats-grid" aria-label="Your day at a glance">
-    <article class="stat-card"><h2>Today's progress</h2><div class="stat-value"><strong>{{ progress }}<small>%</small></strong><span class="stat-icon sage" aria-hidden="true">✓</span></div><progress class="progress-bar" aria-label="Today's routine progress" value="{{ progress }}" max="100">{{ progress }}%</progress></article>
-    <article class="stat-card"><h2>Tasks completed</h2><div class="stat-value"><strong>{{ completed_routines }}<small> / {{ routine_count }}</small></strong><span class="stat-icon peach" aria-hidden="true">☀</span></div><p>A little progress, every day</p></article>
-    <article class="stat-card"><h2>Saved observations</h2><div class="stat-value"><strong>{{ observation_count }}</strong><span class="stat-icon lavender" aria-hidden="true">▤</span></div><p>Moments you've recorded</p></article>
-    <article class="stat-card"><h2>Active routines</h2><div class="stat-value"><strong>{{ active_routine_count }}</strong><span class="stat-icon sage" aria-hidden="true">❧</span></div><p>Groups to guide your day</p></article>
+    <article class="stat-card"><h2>Today's progress</h2><div class="stat-value"><strong>{{ progress }}<small>%</small></strong><svg class="progress-ring" viewBox="0 0 44 44" aria-hidden="true"><circle class="ring-track" cx="22" cy="22" r="17"/><circle class="ring-value" {% if not progress %}style="visibility:hidden"{% endif %} cx="22" cy="22" r="17" pathLength="100" stroke-dasharray="{{ progress }} 100"/></svg></div>{{ progress_bar(progress, "Today's routine progress") }}<p>{{ 'Add your first routine to begin' if not routine_count else 'Every small step counts' }}</p></article>
+    <article class="stat-card"><h2>Tasks completed</h2><div class="stat-value"><strong>{{ completed_routines }}<small> / {{ routine_count }}</small></strong><span class="stat-icon peach">{{ icon('sun') }}</span></div><p>Completed today</p></article>
+    <article class="stat-card"><h2>Saved observations</h2><div class="stat-value"><strong>{{ observation_count }}</strong><span class="stat-icon lavender">{{ icon('note') }}</span></div><p>{{ "Moments you've recorded" if observation_count else 'Room for your first moment' }}</p></article>
+    <article class="stat-card"><h2>Active routines</h2><div class="stat-value"><strong>{{ active_routine_count }}</strong><span class="stat-icon sage">{{ icon('leaf') }}</span></div><p>Groups to guide your day</p></article>
 </section>
 
 <section class="dashboard-grid">
 	<div class="dashboard-card routine-card">
-		<div class="card-header">
-			<div>
-				<p class="card-label">TODAY</p>
-				<h2>Today's Routines</h2>
-			</div>
-			<span class="completion-badge">{{ completed_routines }} of {{ routine_count }}</span>
-            </div>
-            <progress class="progress-bar routine-progress" aria-label="Activities completed today" value="{{ progress }}" max="100">{{ progress }}%</progress>
+        {{ section_header("Today's routines", 'TODAY', completed_routines|string ~ ' of ' ~ routine_count|string) }}
+        {{ progress_bar(progress, 'Activities completed today', 'routine-progress') }}
 
 		<div class="task-list">
 			{% if routine_groups %}
@@ -37,18 +32,18 @@
 			<div class="task-group">
 				<h3 class="task-group-title">{{ category }}</h3>
 				{% for routine in items %}
-				<form class="task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
+				<form class="task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
 					<input type="hidden" name="return_to" value="dashboard">
 					<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
-						<span>{{ routine['name'] }}</span>
+						<span class="task-visual">{{ icon('sun' if category == 'Morning' else 'calendar') }}</span><span>{{ routine['name'] }}</span>
 					</button>
 				</form>
 				{% endfor %}
 			</div>
 			{% endfor %}
 			{% else %}
-			<p>No routines have been added yet.</p>
+			{{ empty_state('No routines have been added yet.', 'routines.routines', 'Create a routine') }}
 			{% endif %}
 		</div>
 
@@ -63,29 +58,10 @@
 			</div>
 		</div>
 
-		<div class="quick-actions">
-			<a href="/routines" class="action-button">
-				<span aria-hidden="true">✓</span>
-				<div>
-					<strong>Routines</strong>
-					<small>Manage activities</small>
-				</div>
-			</a>
-			<a href="/communication" class="action-button">
-				<span aria-hidden="true">💬</span>
-				<div>
-					<strong>Communicate</strong>
-					<small>Open communication</small>
-				</div>
-			</a>
-			<a href="/observations" class="action-button">
-				<span aria-hidden="true">＋</span>
-				<div>
-					<strong>Add Observation</strong>
-					<small>Record something new</small>
-				</div>
-			</a>
-            <a href="{{ url_for('resources') }}" class="action-button"><span aria-hidden="true">▥</span><div><strong>Resources</strong><small>Find helpful information</small></div></a>
+        <div class="quick-actions">
+            {% for endpoint, name, description, glyph in [('routines.routines', 'Routines', 'Manage daily activities', 'calendar'), ('communication.communication', 'Communicate', 'Make a choice together', 'chat'), ('observations.observations', 'Add observation', 'Record a little moment', 'note'), ('resources.resources', 'Resources', 'Find helpful information', 'book')] %}
+            <a href="{{ url_for(endpoint) }}" class="action-button"><span>{{ icon(glyph) }}</span><div><strong>{{ name }}</strong><small>{{ description }}</small></div></a>
+            {% endfor %}
         </div>
     </div>
 </section>
@@ -110,7 +86,7 @@
 		{% endfor %}
 	</div>
 	{% else %}
-	<p class="recent-observations-empty">No observations yet. Add your first observation to get started.</p>
+	{{ empty_state('No observations yet. Capture a small moment from your day.', 'observations.observations', 'Add your first observation') }}
 	{% endif %}
 </section>
 

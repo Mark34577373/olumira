@@ -1,0 +1,97 @@
+# Database migration and recovery runbook
+
+## Current schema and compatibility
+
+The initial Alembic revision is `0001`. It represents the existing schema, not a redesign of the records:
+
+| Table | Columns and relationships |
+| --- | --- |
+| owners | Text id primary key, required text created_at |
+| routines | Integer id primary key, nullable text owner_id, required text name/category; owner index |
+| observations | Integer id primary key, nullable text owner_id, required text activity/date, nullable notes/mood/tags; owner index |
+| routine_completions | Composite primary key (routine_id, completion_date); routine_id references routines.id with ON DELETE CASCADE |
+
+Dates remain ISO text to preserve historical values. No new timestamps or account entities are invented. Existing workspace boundaries are preserved. Nullable owner fields remain nullable for older unowned records; import never silently assigns them to a visitor. Owner foreign keys are deferred until legacy ownership can be resolved through an explicitly approved future migration. Repeated routine names are legitimate; primary-key duplicates are rejected rather than deduplicating records by content.
+
+SQLAlchemy now handles application persistence. Flask-Migrate/Alembic handles schema evolution. `create_all()` is not used. Startup never migrates tables or deletes old workspaces. Database errors roll back and display branded, generic error feedback. Scoped sessions are removed on context teardown. Import uses one transaction, locks destination tables on PostgreSQL (or takes a SQLite write lock), and rolls back on insert or verification failure.
+
+## 1. Back up and inspect the source
+
+Arrange a maintenance window before a real cutover: stop writes so no changes arrive after the backup snapshot. Keep the old deployment and its database available for recovery. Store backups in restricted, ignored local storage; never upload private records to Git.
+
+The SQLite online backup API creates a consistent snapshot; the commands require a new backup filename and will not overwrite one:
+
+```sh
+venv/bin/python -m flask --app app backup-sqlite \
+  --source database/olumira.db \
+  --backup database/backups/reviewed-source.db
+```
+
+The command validates integrity, columns, required values, primary keys, calendar dates, owner relationships, and completion relationships, and prints only table counts. Unknown ownership, malformed dates, missing fields, or an unsupported schema stop the process. Resolve issues in a separate reviewed copy; never delete records just to make validation pass. Backups have owner-only file permissions.
+
+A local backup was already created for this task at `database/backups/pre-day13-20261016.db`: 3 owners, 15 routines, 0 observations, 3 completions. The original database was not stamped, upgraded, or transferred. Use a fresh filename for later backups.
+
+## 2A. Continue using an existing local SQLite database
+
+The original tables already exist, so running the baseline upgrade directly would try to recreate them. Instead, explicitly adopt the schema after backup and validation:
+
+```sh
+venv/bin/python -m flask --app app adopt-legacy-sqlite \
+  --backup database/backups/before-baseline-adoption.db
+venv/bin/python -m flask --app app db current
+venv/bin/python -m flask --app app db upgrade
+```
+
+Adoption requires exactly the four supported tables, column types/nullability, primary keys, expected indexes, and the cascading completion foreign key. It snapshots and validates data, then stamps baseline 0001. It changes only Alembic bookkeeping, never application records. Refusal means manual review is needed; do not bypass it with a blind `flask db stamp`.
+
+## 2B. Prepare an empty destination
+
+For a new local SQLite database, create its parent directory and set `DATABASE_URL` to an absolute SQLAlchemy SQLite URL (`sqlite:////absolute/path/to/destination.db`). For PostgreSQL, set the reviewed destination's URL in your shell or hosting environment; do not paste credentials into source files or terminal transcripts.
+
+Then run:
+
+```sh
+venv/bin/python -m flask --app app db upgrade
+venv/bin/python -m flask --app app db current
+```
+
+The expected revision is 0001. Run upgrade again to confirm it is a no-op. PostgreSQL is configured through psycopg with connection pre-ping. Use the provider's required TLS parameters; app settings never turn TLS verification off. Do not expose connection strings in screenshots/logs.
+
+## 3. Transfer into the empty, migrated target
+
+With `DATABASE_URL` pointing at the intended empty target:
+
+```sh
+venv/bin/python -m flask --app app transfer-sqlite \
+  --source database/olumira.db \
+  --backup database/backups/cutover-source.db
+```
+
+The command first snapshots the source and imports from that snapshot. It refuses any nonempty application table or an unexpected migration revision. All source IDs, nullable metadata, ownership, and completion dates are preserved. It compares every destination row and each table's count before commit, then resets PostgreSQL integer sequences so subsequent inserts cannot collide with imported IDs. The original SQLite database is never removed or overwritten. Verification failures roll back the complete destination import.
+
+The transfer command itself is designed for either an isolated local destination or an explicitly approved production cutover. **Do not run it against a hosted destination until the destination, maintenance window, and cutover are approved.** No production transfer has been performed here.
+
+## 4. Verify before switching traffic
+
+- Confirm migration revision and all four counts against the backup.
+- Exercise existing routine completion in the same signed-cookie workspace, then reload and check both routine views.
+- Add a disposable routine and observation to verify serial sequences and persistence.
+- Check date boundaries using APP_TIMEZONE.
+- Verify that a second visitor cannot modify the first visitor's items.
+- Verify that the stable signing key remains unchanged if existing cookie workspaces must stay accessible.
+- Check generic error pages and sanitized server logs; do not put private data in logs.
+- Keep source and backups until retention and recovery have been reviewed.
+
+## 5. Recovery
+
+If validation or import fails, the target transaction rolls back; the source and backup remain intact. Inspect the target locally before any retry. A partially applied **schema migration** is a separate condition: inspect Alembic state and restore an empty reviewed destination rather than assuming DDL was fully transactional on SQLite.
+
+If cutover validation fails before accepting new writes, keep or restore traffic to the old deployment with its original database and stable signing key. If new writes have been accepted on PostgreSQL, stop writes and reconcile them through a reviewed recovery plan before reverting, to avoid losing post-cutover records.
+
+Restore SQLite only while the app is stopped, to a **new path**, verify it, then point the app at that path. Do not overwrite the original or the only recovery snapshot. Baseline downgrade deliberately refuses to drop tables. Production rollback, table deletion, and restoring over an existing database require explicit approval and are not automated by this project.
+
+## What was actually tested
+
+Automated tests exercise baseline creation/repeated upgrade, model agreement, legacy adoption, constraints, cascade deletion, rollback, workspace isolation, and SQLite-to-SQLite import with exact row verification, refusal of nonempty targets, and forced mid-import failure. The PostgreSQL baseline was also compiled to SQL offline (without a server). No live PostgreSQL server was available. An opt-in `TEST_POSTGRES_URL` test covers PostgreSQL migration, transfer, completion preservation, and sequence advancement against a new disposable database. It remains skipped until that environment is supplied.
+
+Implementation follows the official [Flask application factory pattern](https://flask.palletsprojects.com/en/stable/patterns/appfactories/), [Flask-SQLAlchemy configuration](https://flask-sqlalchemy.palletsprojects.com/en/stable/config/), and [Flask-Migrate migration commands](https://flask-migrate.readthedocs.io/en/latest/).
