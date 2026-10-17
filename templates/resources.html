@@ -12,19 +12,20 @@
     </div>
 </section>
 
+<section class="journal-panel"><form method="get" class="journal-form-grid"><label>Search resources<input name="q" id="resource-search" maxlength="120" value="{{ values.q }}"></label><label>Category<select name="category"><option value="">All categories</option>{% for category in resource_types if category!='All' %}<option {% if values.category==category %}selected{% endif %}>{{ category }}</option>{% endfor %}</select></label><label><input name="saved" type="checkbox" value="1" {% if values.saved=='1' %}checked{% endif %}>My bookmarked resources</label><div><button class="routine-button">Search library</button> <a class="text-link" href="{{ url_for('resources.resources') }}">Clear filters</a></div></form><p>{{ total }} matching resources. General organizational guides by Olumira; no clinical or emergency advice.</p><a href="{{ url_for('resources.resources',saved='1') }}">Saved resources</a></section>
 <section class="resource-library">
     <div class="resource-filter-bar" aria-label="Resource categories">
         {% for resource_type in resource_types %}
-        <button type="button" class="resource-filter{% if loop.first %} active{% endif %}" aria-pressed="{{ 'true' if loop.first else 'false' }}" data-filter="{{ resource_type }}">
+        <form method="get"><input type="hidden" name="q" value="{{ values.q }}"><input type="hidden" name="saved" value="{{ values.saved }}"><button name="category" value="{{ '' if resource_type=='All' else resource_type }}" type="submit" class="resource-filter{% if (values.category or 'All')==resource_type %} active{% endif %}" aria-pressed="{{ 'true' if (values.category or 'All')==resource_type else 'false' }}" data-filter="{{ resource_type }}">
             {{ resource_type }}
-        </button>
+        </button></form>
         {% endfor %}
     </div>
 
     <div class="resource-detail-panel" id="resource-detail-panel" tabindex="-1" role="region" aria-labelledby="resource-detail-title" hidden>
         <p class="eyebrow" id="resource-detail-category">COMMUNICATION</p>
-        <h2 id="resource-detail-title">Visual Communication</h2>
-        <p id="resource-detail-copy">Using pictures, symbols, and simple visual choices can help make communication easier.</p>
+        <h2 id="resource-detail-title">Resource quick read</h2>
+        <p id="resource-detail-copy">Select a guide to read its content.</p>
         <button type="button" class="resource-back-button" id="resource-back-button">Back to Resources</button>
     </div>
 
@@ -41,14 +42,13 @@
                 <span class="resource-category-tag">{{ resource['category'] }}</span>
             </div>
             <h2>{{ resource['title'] }}</h2>
-            <p class="resource-summary">{{ resource['summary'] }}</p>
+            <p class="auth-hint">{{ resource.publisher }}</p><p class="resource-summary">{{ resource['summary'] }}</p>
             <p class="resource-details">{{ resource['details'] }}</p>
             <button type="button" class="resource-learn-more" data-title="{{ resource['title'] }}" data-category="{{ resource['category'] }}" data-copy="{{ resource['details'] }}">
                 {{ resource['action'] }}
-            </button>
+            </button><a class="text-link" href="{{ url_for('resources.detail',identity=resource.id) }}">Open full guide</a><form method="post" action="{{ url_for('resources.bookmark',identity=resource.id,desired='remove' if resource.id in bookmarks else 'save') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button class="routine-button">{{ 'Remove bookmark' if resource.id in bookmarks else 'Bookmark resource' }}</button></form>
         </article>
         {% endfor %}
-    </div>
-</section>
-
+    </div>{% if not resources %}<p class="ui-alert">No matching resources. Clear filters or explore another category.</p>{% endif %}<nav class="journal-actions" aria-label="Resource pages">{% if page>1 %}<a href="{{ url_for('resources.resources',q=values.q,category=values.category,saved=values.saved,page=page-1) }}">Previous page</a>{% endif %}{% if page*20<total %}<a href="{{ url_for('resources.resources',q=values.q,category=values.category,saved=values.saved,page=page+1) }}">Next page</a>{% endif %}</nav>
+</section><noscript><style>.resource-learn-more{display:none}</style></noscript>
 {% endblock %}

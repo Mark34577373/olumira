@@ -141,26 +141,8 @@ def settings():
 
 
 def profile_values():
-    limits = {
-        "display_name": 80,
-        "communication": 500,
-        "routine_preferences": 500,
-        "interests": 500,
-        "support_notes": 1000,
-    }
-    values = {key: request.form.get(key, "").strip() for key in limits}
-    if not values["display_name"] or any(
-        len(values[key]) > limit
-        or any(ord(c) < 32 and c not in "\n\r\t" for c in values[key])
-        for key, limit in limits.items()
-    ):
-        raise ValueError(
-            "Enter a nickname (up to 80 characters). Preferences and interests allow 500 characters each; support notes allow 1,000."
-        )
-    values["avatar"] = request.form.get("avatar", "leaf")
-    if values["avatar"] not in AVATARS:
-        raise ValueError("Choose one of the built-in illustrations.")
-    return values
+    from services.workspaces import profile_values as validate
+    return validate(request.form)
 
 
 @bp.route("/profiles/new", methods=["GET", "POST"])
@@ -168,17 +150,8 @@ def new_profile():
     active("profiles.create")
     if request.method == "POST":
         try:
-            values = profile_values()
-            with transaction():
-                require("profiles.create", lock=True)
-                import uuid
-
-                profile = CareProfile(
-                    id=uuid.uuid4().hex, workspace_id=g.workspace_id, **values
-                )
-                db.session.add(profile)
-                db.session.flush()
-                audit("profile.created", g.workspace_id, current_user.id, profile.id)
+            from services.workspaces import create_profile
+            profile=create_profile(request.form)
             session["profile_id"] = profile.id
             flash("Care profile created.", "success")
             return redirect(
@@ -219,7 +192,7 @@ def select_profile():
     if profile_id:
         get_profile(profile_id)
     session["profile_id"] = profile_id or None
-    return redirect(url_for({"communication":"communication.open_personal_board","observations":"observations.timeline"}.get(request.form.get("return_to"),"dashboard.dashboard")))
+    return redirect(url_for({"communication":"communication.open_personal_board","observations":"observations.timeline","calendar":"calendar.calendar"}.get(request.form.get("return_to"),"dashboard.dashboard")))
 
 
 @bp.get("/profiles/<profile_id>")

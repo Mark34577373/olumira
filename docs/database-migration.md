@@ -170,3 +170,7 @@ rollback requires a reviewed backup/code/key restore. See [the runbook](day-27-2
 ## Days 29–32 additive journal extension (0014)
 
 Head 0014 adds journal metadata and scope/time/category/completion indexes without rebuilding legacy tables. Existing authors/event/creation times remain unknown when not recorded. Observation author, creation and scope are preserved; linked sessions/tasks must match scope. No reporting tables or public file storage are added. Back up, migrate, restart, and follow [the Days 29–32 runbook](day-29-32.md). Legacy-only transfer refuses rich observation metadata rather than silently discarding it.
+
+## Days 33–36 (0015–0018)
+
+Additive calendar/reminder tables (0015), curated resource/bookmark tables and one-time guide seed (0016), personal dashboard preferences (0017), and premium onboarding state with existing-member exemption (0018). Existing records are preserved. Exemption does not claim historical onboarding completion. SQLite and PostgreSQL guards validate profile/resource scope. Back up, upgrade to head 0018, restart workers and follow [the runbook](day-33-36.md). Downgrade requires reviewed recovery from backup; no automatic destructive downgrade is provided.

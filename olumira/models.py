@@ -503,3 +503,91 @@ class HandoffTask(db.Model):
     __tablename__ = 'handoff_tasks'
     handoff_id = db.Column(db.String(32),db.ForeignKey('caregiver_handoffs.id'),primary_key=True)
     task_id = db.Column(db.String(32),db.ForeignKey('caregiver_tasks.id'),primary_key=True)
+
+
+class CalendarEvent(db.Model):
+    __tablename__='calendar_events'
+    __table_args__=(db.Index('ix_calendar_scope_start','workspace_id','profile_id','start_date'),)
+    id=db.Column(db.String(32),primary_key=True)
+    workspace_id=db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),nullable=False)
+    profile_id=db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    title=db.Column(db.String(120),nullable=False)
+    description=db.Column(db.String(2000),nullable=False,default='')
+    start_date=db.Column(db.String(10),nullable=False)
+    local_time=db.Column(db.String(5),nullable=False)
+    end_date=db.Column(db.String(10),nullable=False)
+    end_time=db.Column(db.String(5),nullable=False)
+    timezone=db.Column(db.String(64),nullable=False)
+    all_day=db.Column(db.Boolean,nullable=False,default=False)
+    frequency=db.Column(db.String(12),nullable=False,default='once')
+    weekdays=db.Column(db.String(20),nullable=False,default='')
+    repeat_until=db.Column(db.String(10))
+    assigned_to=db.Column(db.String(32),db.ForeignKey('users.id'))
+    status=db.Column(db.String(12),nullable=False,default='active')
+    version=db.Column(db.Integer,nullable=False,default=1)
+    created_by=db.Column(db.String(32),db.ForeignKey('users.id'),nullable=False)
+    created_at=db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+    updated_at=db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+
+
+class ReminderPreference(db.Model):
+    __tablename__='reminder_preferences'
+    user_id=db.Column(db.String(32),db.ForeignKey('users.id'),primary_key=True)
+    workspace_id=db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),primary_key=True)
+    context_key=db.Column(db.String(32),primary_key=True)
+    profile_id=db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    enabled=db.Column(db.Boolean,nullable=False,default=True)
+    lead_minutes=db.Column(db.Integer,nullable=False,default=60)
+    categories=db.Column(db.String(60),nullable=False,default='routine,task,event')
+    version=db.Column(db.Integer,nullable=False,default=1)
+
+
+class Resource(db.Model):
+    __tablename__='resources'
+    id=db.Column(db.String(40),primary_key=True)
+    title=db.Column(db.String(120),nullable=False)
+    summary=db.Column(db.String(500),nullable=False)
+    content=db.Column(db.Text,nullable=False)
+    category=db.Column(db.String(60),nullable=False,index=True)
+    tags=db.Column(db.String(200),nullable=False,default='')
+    publisher=db.Column(db.String(120),nullable=False)
+    external_url=db.Column(db.String(1000))
+    publication_date=db.Column(db.String(10))
+    reviewed_at=db.Column(db.String(10))
+    published=db.Column(db.Boolean,nullable=False,default=True)
+    created_at=db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+    updated_at=db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+
+
+class ResourceBookmark(db.Model):
+    __tablename__='resource_bookmarks'
+    user_id=db.Column(db.String(32),db.ForeignKey('users.id'),primary_key=True)
+    resource_id=db.Column(db.String(40),db.ForeignKey('resources.id'),primary_key=True)
+    created_at=db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+
+
+class DashboardPreference(db.Model):
+    __tablename__='dashboard_preferences'
+    user_id=db.Column(db.String(32),db.ForeignKey('users.id'),primary_key=True)
+    workspace_id=db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),primary_key=True)
+    preferred_profile_id=db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    sections=db.Column(db.String(120),nullable=False,default='upcoming,runs,communication,observations,collaboration,insights')
+    timezone=db.Column(db.String(64),nullable=False,default='America/Chicago')
+    version=db.Column(db.Integer,nullable=False,default=1)
+
+
+class OnboardingState(db.Model):
+    """DAY 36 — PREMIUM EXPERIENCE PHASE 1: GUIDED ONBOARDING."""
+    __tablename__='onboarding_states'
+    user_id=db.Column(db.String(32),db.ForeignKey('users.id'),primary_key=True)
+    workspace_id=db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),primary_key=True)
+    step=db.Column(db.Integer,nullable=False,default=0)
+    version=db.Column(db.Integer,nullable=False,default=1)
+    profile_id=db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    routine_id=db.Column(db.Integer,db.ForeignKey('routines.id'))
+    board_id=db.Column(db.String(32),db.ForeignKey('communication_boards.id'))
+    skipped_steps=db.Column(db.String(40),nullable=False,default='')
+    started_at=db.Column(db.DateTime(timezone=True))
+    completed_at=db.Column(db.DateTime(timezone=True))
+    skipped_at=db.Column(db.DateTime(timezone=True))
+    legacy_exempt=db.Column(db.Boolean,nullable=False,default=False)

@@ -355,8 +355,8 @@ def occurrence_id(revision_id, day):
 
 def calendar(start, days, display_zone):
     require("routines.view")
-    if not 1 <= days <= 14:
-        raise InvalidSchedule("Choose a window of up to 14 days.")
+    if not 1 <= days <= 42:
+        raise InvalidSchedule("Choose a window of up to 42 days.")
     tz = zone(display_zone)
     if start.year >= 9998:
         raise InvalidSchedule("Choose an earlier calendar date.")

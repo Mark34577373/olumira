@@ -157,29 +157,7 @@ def calculate(p, category=""):
     obs_terms = [Observation.archived_at.is_(None)]
     if category:
         obs_terms.append(Observation.category == category)
-    stats = dict(
-        routine_completions=count(
-            RoutineSession,
-            RoutineSession.status == "completed",
-            interval(RoutineSession.completed_at, p),
-        ),
-        observations=count(
-            Observation, *obs_terms, interval(Observation.observed_at, p)
-        ),
-        active_routines=count(Routine, Routine.archived_at.is_(None)),
-        completed_tasks=count(
-            Task, Task.status == "completed", interval(Task.completed_at, p)
-        ),
-        pending_handoffs=count(Handoff, pending()),
-    )
-    unknown = count(
-        Observation,
-        *obs_terms,
-        Observation.observed_at.is_(None),
-        Observation.date >= p.first.isoformat(),
-        Observation.date <= p.last.isoformat(),
-    )
-    stats["date_only_observations"] = unknown
+    stats = metric_counts(p, category)
     categories = db.session.execute(
         select(Observation.category, func.count())
         .where(scoped(Observation), *obs_terms, interval(Observation.observed_at, p))
@@ -275,3 +253,34 @@ DEFINITIONS = (
         "Start and through dates are inclusive in the chosen IANA timezone; queries use a half-open UTC interval. Weekly buckets begin on the selected start date. Zero bars mean no matching stored events; missing legacy times are never treated as zero events.",
     ),
 )
+
+
+def metric_counts(p, category=""):
+    require("analytics.view")
+    obs_terms = [Observation.archived_at.is_(None)]
+    if category:
+        obs_terms.append(Observation.category == category)
+    stats = dict(
+        routine_completions=count(
+            RoutineSession,
+            RoutineSession.status == "completed",
+            interval(RoutineSession.completed_at, p),
+        ),
+        observations=count(
+            Observation, *obs_terms, interval(Observation.observed_at, p)
+        ),
+        active_routines=count(Routine, Routine.archived_at.is_(None)),
+        completed_tasks=count(
+            Task, Task.status == "completed", interval(Task.completed_at, p)
+        ),
+        pending_handoffs=count(Handoff, pending()),
+    )
+    unknown = count(
+        Observation,
+        *obs_terms,
+        Observation.observed_at.is_(None),
+        Observation.date >= p.first.isoformat(),
+        Observation.date <= p.last.isoformat(),
+    )
+    stats["date_only_observations"] = unknown
+    return stats

@@ -59,7 +59,7 @@ if (resourceFilterRoot) {
 
 	cards.forEach((card) => {
 		const openCard = () => showDetail(card.dataset.category, card.dataset.title, card.dataset.copy);
-		card.addEventListener("click", openCard);
+		card.addEventListener("click", (event) => { if (!event.target.closest("a,button,input,form")) openCard(); });
 		card.addEventListener("keydown", (event) => {
             if (event.target !== card) return;
 			if (event.key === "Enter" || event.key === " ") {
@@ -276,3 +276,6 @@ if (!accountLinkForm && document.querySelector('[data-invitation-guidance]')) {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
 }
+
+// Native navigation remains the fallback; saved-state guards own idempotency.
+document.querySelectorAll('.setup-step').forEach(form => form.addEventListener('submit', () => {form.setAttribute('aria-busy','true');const status=form.querySelector('#setup-save-status');if(status) status.textContent='Saving your setup step…';}));

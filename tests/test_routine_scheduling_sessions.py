@@ -217,7 +217,8 @@ class SchedulingSessionTests(unittest.TestCase):
         home = self.client.get("/")
         self.assertEqual(home.status_code, 200)
         self.assertIn("Fictional woodland morning", home.text)
-        self.assertIn("Room for your routines", home.text)
+        self.assertIn("Upcoming schedule", home.text)
+        self.assertIn('href="/calendar"', home.text)
         self.assertIn(
             "Guided runs and daily checklist marks are counted separately", home.text
         )

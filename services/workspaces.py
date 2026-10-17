@@ -23,6 +23,7 @@ READ = frozenset(
         "observations.view",
         "communication.view",
         "care.view",
+        "calendar.view",
         "analytics.view",
     }
 )
@@ -37,6 +38,7 @@ WRITE = frozenset(
         "observations.edit",
         "communication.manage",
         "care.manage",
+        "calendar.manage",
         "reports.generate",
         "care.acknowledge",
     }
@@ -204,3 +206,21 @@ def care_audit(event_type, target_id=None):
             current_user.id,
             str(target_id) if target_id is not None else None,
         )
+
+
+def profile_values(values):
+    limits=dict(display_name=80,communication=500,routine_preferences=500,interests=500,support_notes=1000)
+    clean={key:(values.get(key) or '').strip() for key in limits}
+    if not clean['display_name'] or any(len(clean[key])>limit or any(ord(c)<32 and c not in '\n\r\t' for c in clean[key]) for key,limit in limits.items()):
+        raise ValueError('Enter a nickname up to 80 characters; preferences and interests allow 500, support notes 1,000.')
+    clean['avatar']=values.get('avatar','leaf')
+    if clean['avatar'] not in ['leaf','sun','flower','star']: raise ValueError('Choose a built-in profile illustration.')
+    return clean
+
+
+def create_profile(values):
+    require('profiles.create',lock=True)
+    with transaction():
+        row=CareProfile(id=uuid.uuid4().hex,workspace_id=g.workspace_id,**profile_values(values))
+        db.session.add(row);db.session.flush();care_audit('profile.created',row.id)
+        return row

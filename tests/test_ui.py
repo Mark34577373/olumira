@@ -70,7 +70,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         html = self.client.get('/').get_data(as_text=True)
         self.assertIn('&lt;script&gt;test&lt;/script&gt;', html)
-        self.assertIn('A fictional test observation', html)
+        self.assertNotIn('A fictional test observation', html)  # Dashboard keeps private note bodies on the detail page.
         self.assertIn('<strong>1</strong>', html)
         other = self.app.test_client()
         self.assertNotIn('A fictional test observation', other.get('/').get_data(as_text=True))

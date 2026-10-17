@@ -42,6 +42,7 @@ from services import (
     communication_preferences as personalization,
     care_coordination as coordination,
     journal,
+    calendar as calendar_service,
 )
 
 
@@ -73,6 +74,7 @@ def main():
                 ("preview@example.com", "Fictional Rowan"),
                 ("sage-preview@example.com", "Fictional Sage"),
                 ("willow-preview@example.com", "Fictional Willow"),
+                ("welcome-preview@example.com", "Fictional first-use guest"),
             ]:
                 user = register_user(email, name, password)
                 request_link(email, "verify_email")
@@ -296,6 +298,24 @@ def main():
                             task_id=task_id,
                         )
                     )
+                    tomorrow = observed.date() + timedelta(days=1)
+                    calendar_service.save(
+                        dict(
+                            title="Fictional garden visit",
+                            description="A fictional shared calendar plan for trying the new views.",
+                            start_date=tomorrow.isoformat(),
+                            local_time="10:00",
+                            end_date=tomorrow.isoformat(),
+                            end_time="11:00",
+                            timezone="America/Chicago",
+                            frequency="weekly",
+                            repeat_until="",
+                            assigned_to=users[1].id,
+                            creation_key=uuid.uuid4().hex,
+                            scope_workspace=workspace_id,
+                            profile_id=chosen or "",
+                        )
+                    )
                     coordination.create_handoff(
                         dict(
                             summary="Fictional handoff: the visual morning routine is paused after three steps. Review it together when ready.",
@@ -318,6 +338,7 @@ def main():
                     email="preview@example.com",
                     caregiver="sage-preview@example.com",
                     viewer="willow-preview@example.com",
+                    onboarding="welcome-preview@example.com",
                     password=password,
                 ),
                 handle,

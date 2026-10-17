@@ -34,7 +34,7 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0014`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0018`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -210,3 +210,14 @@ See [behavior, privacy, setup, demo and rollback](docs/day-27-28.md) and
 available via `venv/bin/python scripts/preview_routines.py --port 5055`.
 
 Days 29–32 add structured observations, the searchable timeline, scoped caregiver insights, and private PDF/CSV reports. See [implementation and operating notes](docs/day-29-32.md) and [actual verification results](docs/day-29-32-verification.md). Reports use real stored events and disclose unknown historical times and unavailable scheduled completion rates.
+
+## Days 33–36: core completion → premium experience
+
+| Day | Phase | Implemented |
+| --- | --- | --- |
+| 33 | Core product completion | Unified calendar, custom recurring events and in-app reminder preferences |
+| 34 | Core product completion | Stored resource library, server search and personal bookmarks |
+| 35 | Core product completion | Profile-aware dashboard, real metrics and personal preferences |
+| 36 | **PREMIUM EXPERIENCE PHASE 1: GUIDED ONBOARDING** | Saved setup, first-use guidance and contextual product tour |
+
+Migrate to **0018** and restart the process. No new dependencies or environment variables. See [milestone implementation and operation](docs/day-33-36.md) and [verification/readiness](docs/day-33-36-verification.md). Background reminder delivery remains deferred to Day 38. The fictional interactive preview can be started with `venv/bin/python scripts/preview_routines.py --port 5059`.

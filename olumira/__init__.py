@@ -54,11 +54,11 @@ def create_app(config=None):
 
     csrf.init_app(app)
 
-    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care
-    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care):
+    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding
+    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding):
         app.register_blueprint(module.bp)
 
-    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care'}
+    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care', 'calendar', 'onboarding'}
 
     @login_manager.unauthorized_handler
     def require_login():

@@ -39,6 +39,12 @@ from olumira.models import (
     CaregiverHandoff,
     HandoffRecipient,
     HandoffTask,
+    CalendarEvent,
+    ReminderPreference,
+    Resource,
+    ResourceBookmark,
+    DashboardPreference,
+    OnboardingState,
 )
 
 MODELS = (Owner, Routine, Observation, RoutineCompletion)
@@ -179,6 +185,11 @@ def transfer_sqlite(source, backup):
             "caregiver_handoffs",
             "handoff_recipients",
             "handoff_tasks",
+            "calendar_events",
+            "reminder_preferences",
+            "resource_bookmarks",
+            "dashboard_preferences",
+            "onboarding_states",
         ):
             if (
                 table in tables
@@ -201,14 +212,43 @@ def transfer_sqlite(source, backup):
             raise ValueError(
                 "Legacy transfer refuses rich routine metadata; use a complete database migration"
             )
-        observation_columns = {row[1] for row in source_connection.execute("PRAGMA table_info(observations)")}
-        if "category" in observation_columns and source_connection.execute("SELECT 1 FROM observations WHERE category<>'General notes' OR author_id IS NOT NULL OR observed_at IS NOT NULL OR timezone IS NOT NULL OR created_at IS NOT NULL OR updated_at IS NOT NULL OR archived_at IS NOT NULL OR version<>1 OR session_id IS NOT NULL OR task_id IS NOT NULL LIMIT 1").fetchone():
-            raise ValueError("Legacy transfer refuses rich observation metadata; use a complete database migration")
+        observation_columns = {
+            row[1]
+            for row in source_connection.execute("PRAGMA table_info(observations)")
+        }
+        if (
+            "category" in observation_columns
+            and source_connection.execute(
+                "SELECT 1 FROM observations WHERE category<>'General notes' OR author_id IS NOT NULL OR observed_at IS NOT NULL OR timezone IS NOT NULL OR created_at IS NOT NULL OR updated_at IS NOT NULL OR archived_at IS NOT NULL OR version<>1 OR session_id IS NOT NULL OR task_id IS NOT NULL LIMIT 1"
+            ).fetchone()
+        ):
+            raise ValueError(
+                "Legacy transfer refuses rich observation metadata; use a complete database migration"
+            )
+        resource_rows = None
+        if "resources" in tables:
+            fields = [
+                column.name
+                for column in Resource.__table__.columns
+                if column.name not in ["created_at", "updated_at"]
+            ]
+            resource_rows = [
+                tuple(row)
+                for row in source_connection.execute(
+                    "SELECT " + ",".join(fields) + " FROM resources ORDER BY id"
+                )
+            ]
+            if source_connection.execute(
+                "SELECT 1 FROM resources WHERE created_at<>updated_at LIMIT 1"
+            ).fetchone():
+                raise ValueError(
+                    "Legacy transfer refuses edited resource metadata; use a complete migration"
+                )
     with db.engine.begin() as connection:
         if connection.dialect.name == "postgresql":
             connection.execute(
                 text(
-                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks IN ACCESS EXCLUSIVE MODE"
+                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks, calendar_events, reminder_preferences, resources, resource_bookmarks, dashboard_preferences, onboarding_states IN ACCESS EXCLUSIVE MODE"
                 )
             )
         elif connection.dialect.name == "sqlite":
@@ -221,7 +261,7 @@ def transfer_sqlite(source, backup):
             or connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
-            != "0014"
+            != "0018"
         ):
             raise ValueError(
                 "Destination must be migrated to the supported revision first"
@@ -256,9 +296,27 @@ def transfer_sqlite(source, backup):
             CaregiverHandoff,
             HandoffRecipient,
             HandoffTask,
+            CalendarEvent,
+            ReminderPreference,
+            ResourceBookmark,
+            DashboardPreference,
+            OnboardingState,
         ):
             if connection.execute(select(model.__table__).limit(1)).first() is not None:
                 raise ValueError("Destination is not empty; transfer refused")
+        if resource_rows is not None:
+            expected = [
+                tuple(row)
+                for row in connection.execute(
+                    select(*[Resource.__table__.c[key] for key in fields]).order_by(
+                        Resource.id
+                    )
+                )
+            ]
+            if resource_rows != expected:
+                raise ValueError(
+                    "Legacy transfer refuses changed curated resources; use a complete database migration"
+                )
         for model in MODELS:
             table = model.__table__
             rows = records[table.name]

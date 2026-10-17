@@ -6,7 +6,7 @@ PASSWORD = 'Fictional cedar trail passphrase 42'
 
 
 def csrf_token(client):
-    html = client.get('/', follow_redirects=True).text
+    html = client.get('/auth/settings', follow_redirects=True).text
     match = re.search(r'name="csrf_token"[^>]*value="([^"]+)"', html)
     if match is None:
         raise AssertionError('Page did not provide a CSRF token')
