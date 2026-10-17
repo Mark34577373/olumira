@@ -1,7 +1,7 @@
 """Application construction without schema changes or destructive startup tasks."""
-import uuid
 from pathlib import Path
-from flask import Flask, g, render_template, request, session
+from flask import Flask, g, render_template, request, session, redirect, url_for, flash
+from flask_login import current_user
 from .config import configuration
 
 
@@ -17,7 +17,7 @@ def create_app(config=None):
     app = OlumiraFlask(__name__, template_folder=str(root / 'templates'), static_folder=str(root / 'static'))
     app.config.update(configuration(config))
 
-    from .extensions import db, migrate
+    from .extensions import db, migrate, login_manager, limiter, csrf
     from . import models
     from sqlalchemy import event
     from sqlalchemy.exc import SQLAlchemyError
@@ -32,25 +32,62 @@ def create_app(config=None):
                 cursor.execute('PRAGMA foreign_keys=ON')
                 cursor.close()
 
-    from .routes import dashboard, routines, communication, observations, resources
-    for module in (dashboard, routines, communication, observations, resources):
+    from werkzeug.middleware.proxy_fix import ProxyFix
+    hops = app.config['TRUSTED_PROXY_HOPS']
+    if hops:
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=0)
+    login_manager.init_app(app)
+    login_manager.session_protection = 'strong'
+    login_manager.login_view = 'auth.login'
+    from services.authentication import load_user
+    login_manager.user_loader(load_user)
+    limiter.init_app(app)
+    csrf.init_app(app)
+
+    from .routes import dashboard, routines, communication, observations, resources, auth
+    for module in (dashboard, routines, communication, observations, resources, auth):
         app.register_blueprint(module.bp)
 
+    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources'}
+
+    @login_manager.unauthorized_handler
+    def require_login():
+        expired = getattr(g, 'auth_expired', False)
+        session.clear()
+        flash('Your session ended. Please sign in again.' if expired else 'Sign in to continue.', 'info')
+        # Only the fixed application path is retained, never arbitrary query strings.
+        return redirect(url_for('auth.login', next=request.path))
+
     @app.before_request
-    def load_workspace():
-        if request.endpoint in (None, 'static'):
+    def authorize_workspace():
+        if request.blueprint not in protected_blueprints:
             return
-        from services.database import ensure_workspace
-        owner_id = session.get('owner_id') or uuid.uuid4().hex
-        ensure_workspace(owner_id)
-        session['owner_id'] = owner_id
-        session.permanent = True
-        g.owner_id = owner_id
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+        # Cookie-supplied legacy owner_id is never used for authorization.
+        if not current_user.email_verified:
+            return redirect(url_for('auth.verification'))
+        g.owner_id = current_user.owner_id
+
+    @app.after_request
+    def security_headers(response):
+        if request.endpoint != 'static':
+            response.headers['Cache-Control'] = 'no-store'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Referrer-Policy'] = 'no-referrer'
+        response.headers['Content-Security-Policy'] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+        if app.config['APP_ENV'] == 'production':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000'
+        return response
 
     messages = {
         400: ('Let’s check that request', 'Some information was missing or could not be accepted. Please go back and try again.'),
         404: ('This page has wandered off', 'We couldn’t find that page or item. You can return to your dashboard to continue.'),
         405: ('That action isn’t available here', 'Please use the page controls to complete this action.'),
+        429: ('Let’s take a short pause', 'Too many attempts. Please wait a while before trying again.'),
         500: ('Something needs a little attention', 'We couldn’t complete your request. Please try again in a moment.'),
     }
 
@@ -67,6 +104,13 @@ def create_app(config=None):
 
     for code in messages:
         app.register_error_handler(code, error_page)
+    from flask_wtf.csrf import CSRFError
+
+    @app.errorhandler(CSRFError)
+    def csrf_error(error):
+        return render_template('error.html', code=400, heading='Your form needs a refresh',
+                               message='For your security, please refresh the page and try again.'), 400
+
     @app.errorhandler(SQLAlchemyError)
     def database_error(error):
         db.session.rollback()
@@ -74,4 +118,6 @@ def create_app(config=None):
 
     from .commands import register_commands
     register_commands(app)
+    from .mail_commands import register_mail_commands
+    register_mail_commands(app)
     return app

@@ -5,7 +5,7 @@ from datetime import date
 from pathlib import Path
 from sqlalchemy import inspect, select, text
 from olumira.extensions import db
-from olumira.models import Owner, Routine, Observation, RoutineCompletion
+from olumira.models import Owner, Routine, Observation, RoutineCompletion, User, AuthSession, AccountToken, EmailOutbox
 
 MODELS = (Owner, Routine, Observation, RoutineCompletion)
 
@@ -71,17 +71,22 @@ def transfer_sqlite(source, backup):
     """Back up first; import an immutable snapshot in one destination transaction."""
     snapshot = backup_sqlite(source, backup)
     records = read_snapshot(snapshot)
+    with closing(sqlite3.connect(snapshot)) as source_connection:
+        tables = {r[0] for r in source_connection.execute("SELECT name FROM sqlite_master WHERE type='table'")}
+        for table in ('users', 'auth_sessions', 'account_tokens', 'email_outbox'):
+            if table in tables and source_connection.execute(f'SELECT 1 FROM {table} LIMIT 1').fetchone():
+                raise ValueError('Legacy-only transfer refuses account/session records; use an account-aware migration')
     with db.engine.begin() as connection:
         if connection.dialect.name == 'postgresql':
-            connection.execute(text('LOCK TABLE owners, routines, observations, routine_completions IN ACCESS EXCLUSIVE MODE'))
+            connection.execute(text('LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox IN ACCESS EXCLUSIVE MODE'))
         elif connection.dialect.name == 'sqlite':
             connection.exec_driver_sql('BEGIN IMMEDIATE')
         else:
             raise ValueError('Unsupported destination database')
         inspector = inspect(connection)
-        if 'alembic_version' not in inspector.get_table_names() or connection.execute(text('SELECT version_num FROM alembic_version')).scalar() != '0001':
+        if 'alembic_version' not in inspector.get_table_names() or connection.execute(text('SELECT version_num FROM alembic_version')).scalar() != '0003':
             raise ValueError('Destination must be migrated to the supported revision first')
-        for model in MODELS:
+        for model in (*MODELS, User, AuthSession, AccountToken, EmailOutbox):
             if connection.execute(select(model.__table__).limit(1)).first() is not None:
                 raise ValueError('Destination is not empty; transfer refused')
         for model in MODELS:

@@ -1,0 +1,15 @@
+Olumira
+
+Confirm your new email
+
+Your current sign-in address stays active until you confirm this new address. Confirming ends all previous sessions.
+
+Confirm new email: {{ link }}
+
+This link expires in {{ minutes }} minutes and works only once. Confirm the action on the page.
+If the link cannot fill your code, paste this recovery code into the page:
+{{ code }}
+
+If you did not request this, ignore this email. Do not share the link or code.
+
+A little structure. A little more calm.

@@ -1,0 +1,8 @@
+{% extends 'auth/layout.html' %}
+{% block title %}{{ heading }} | Olumira{% endblock %}
+{% block auth_content %}
+<p class="eyebrow">YOUR OLUMIRA ACCOUNT</p><h1>{{ heading }}</h1>
+<p class="auth-description" role="status">{{ message }}</p>
+<a class="routine-button auth-link-button" href="{{ url_for('auth.login') }}">Continue to sign in</a>
+<p class="auth-footer"><a href="{{ url_for('auth.resend_verification') }}">Request a verification email</a> · <a href="{{ url_for('auth.forgot_password') }}">Reset a password</a></p>
+{% endblock %}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% from 'auth/_field.html' import auth_field %}
+{% from 'components/ui.html' import page_heading, alert %}
+{% block title %}Account settings | Olumira{% endblock %}
+{% block content %}
+{{ page_heading('Your account', 'A few thoughtful settings to keep your account yours.', 'ACCOUNT SETTINGS') }}
+{% if error %}{{ alert(error, 'error') }}{% endif %}
+<div class="settings-grid">
+<section class="dashboard-card"><h2>About you</h2>
+<form method="post" class="auth-form">{{ profile.hidden_tag() }}<input type="hidden" name="action" value="profile">
+{{ auth_field(profile.display_name, 'nickname') }}<button class="routine-button" type="submit">Save display name</button></form></section>
+<section class="dashboard-card"><h2>Email address</h2>
+<p class="wrap-anywhere">{{ current_user.email }}</p><p class="status-badge">{{ 'Verified' if current_user.email_verified else 'Not verified yet' }}</p>
+{% if not current_user.email_verified %}<p><a class="text-link" href="{{ url_for('auth.verification') }}">Verify your email →</a></p>{% endif %}
+{% if current_user.pending_email %}<p class="wrap-anywhere" role="status">Awaiting confirmation: <strong>{{ current_user.pending_email }}</strong></p>{% endif %}
+<p class="auth-description">We’ll verify the new address before changing where you sign in.</p>
+<form method="post" class="auth-form">{{ email.hidden_tag() }}<input type="hidden" name="action" value="email">
+{{ auth_field(email.email, 'email') }}{{ auth_field(email.current_password, 'current-password', password=true) }}
+<button class="routine-button" type="submit">Verify new email</button></form>
+{% if current_user.pending_email %}<details class="settings-details"><summary>Cancel the pending change</summary>
+<form method="post" class="auth-form">{{ cancel.hidden_tag() }}<input type="hidden" name="action" value="cancel">
+{{ auth_field(cancel.current_password, 'current-password', password=true) }}<button class="routine-button" type="submit">Cancel email change</button></form></details>{% endif %}</section>
+<section class="dashboard-card"><h2>Change password</h2><p class="auth-description">Changing your password ends every signed-in session.</p>
+<form method="post" class="auth-form">{{ password.hidden_tag() }}<input type="hidden" name="action" value="password">
+{{ auth_field(password.current_password, 'current-password', password=true) }}
+{{ auth_field(password.password, 'new-password', 'Use 15–128 characters.', password=true) }}
+{{ auth_field(password.confirm_password, 'new-password', password=true) }}
+<button class="routine-button" type="submit">Update password</button></form></section>
+<section class="dashboard-card"><h2>Your sessions</h2><p class="auth-description">Sign out on every device, including this one. Pending account links and email changes will also be cancelled.</p>
+<form method="post" class="auth-form">{{ sessions.hidden_tag() }}<input type="hidden" name="action" value="sessions">
+{{ auth_field(sessions.current_password, 'current-password', password=true) }}<button class="routine-button" type="submit">Sign out everywhere</button></form></section>
+</div>
+{% endblock %}

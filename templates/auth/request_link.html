@@ -1,0 +1,14 @@
+{% extends 'auth/layout.html' %}
+{% from 'auth/_field.html' import auth_field %}
+{% block title %}{{ 'Reset your password' if purpose == 'reset' else 'Verify your email' }} | Olumira{% endblock %}
+{% block auth_content %}
+<p class="eyebrow">A LITTLE HELP GETTING BACK</p>
+<h1>{{ 'Forgot your password?' if purpose == 'reset' else 'Verify your email' }}</h1>
+<p class="auth-description">{{ 'Enter your email and we’ll help you choose a new password.' if purpose == 'reset' else 'Request a fresh verification link for your account.' }}</p>
+<form method="post" class="auth-form">
+    {{ form.hidden_tag() }}
+    {{ auth_field(form.email, 'email') }}
+    <button class="routine-button auth-submit" type="submit">{{ 'Request reset link' if purpose == 'reset' else 'Request verification link' }}</button>
+</form>
+<p class="auth-footer"><a href="{{ url_for('auth.login') }}">Back to sign in</a></p>
+{% endblock %}

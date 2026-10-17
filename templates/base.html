@@ -11,22 +11,45 @@
     <script src="{{ url_for('static', filename='js/app.js') }}" defer></script>
 </head>
 
-<body>
+<body data-authenticated="{{ 'true' if current_user.is_authenticated else 'false' }}">
 
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
     <nav aria-label="Main navigation">
         <a class="logo" href="{{ url_for('dashboard.dashboard') }}">Olumira<span class="brand-dot" aria-hidden="true">.</span></a>
+        {% if current_user.is_authenticated %}
+        {% if current_user.email_verified %}
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-links" hidden>Menu <span aria-hidden="true">☰</span></button>
         <div class="nav-links" id="primary-links">
             {% for endpoint, label in [('dashboard.dashboard', 'Dashboard'), ('routines.routines', 'Routines'), ('communication.communication', 'Communication'), ('observations.observations', 'Observations'), ('resources.resources', 'Resources')] %}
             <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
             {% endfor %}
         </div>
-        <span class="profile-placeholder" aria-label="Personal workspace; accounts coming later" title="Personal workspace · accounts coming later">{{ icon('person') }}</span>
+        {% endif %}
+        <details class="account-menu">
+            <summary aria-label="Account menu">{{ icon('person') }}<span>Account</span></summary>
+            <div class="account-panel">
+                <p class="account-name">{{ current_user.display_name }}</p>
+                <p class="auth-hint">Email {{ 'verified' if current_user.email_verified else 'not verified' }}</p>
+                <a class="text-link" href="{{ url_for('auth.settings') }}">Account settings</a>
+                <form method="post" action="{{ url_for('auth.logout') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="routine-button">Sign out</button>
+                </form>
+            </div>
+        </details>
+        {% else %}
+        <div class="public-nav" aria-label="Account navigation">
+            <a href="{{ url_for('auth.login') }}" {% if request.endpoint == 'auth.login' %}aria-current="page"{% endif %}>Sign in</a>
+            <a href="{{ url_for('auth.register') }}" {% if request.endpoint == 'auth.register' %}aria-current="page"{% endif %}>Create account</a>
+        </div>
+        {% endif %}
     </nav>
     </header>
     <main id="main-content" tabindex="-1">
+        {% for category, message in get_flashed_messages(with_categories=true) %}
+        <p class="ui-alert" role="status">{{ message }}</p>
+        {% endfor %}
         {% block content %}
         {% endblock %}
     </main>

@@ -82,7 +82,7 @@ if (resourceFilterRoot) {
 const communicationRoot = document.querySelector("#communication-app");
 
 if (communicationRoot) {
-	const customStorageKey = "olumira.customCommunication.v1";
+	const customStorageKey = `olumira.customCommunication.v2.${communicationRoot.dataset.storageScope}`;
 	const emptyDisplay = communicationRoot.querySelector("#communication-empty");
 	const messageDisplay = communicationRoot.querySelector("#communication-message");
 	const dialog = communicationRoot.querySelector("#communication-dialog");
@@ -216,4 +216,53 @@ if (menuToggle) {
     navigation.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') { closeMenu(); menuToggle.focus(); }
     });
+}
+
+
+document.querySelectorAll('form[data-confirm]').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+        if (!window.confirm(form.dataset.confirm)) event.preventDefault();
+    });
+});
+document.querySelectorAll('[data-password-toggle]').forEach((button) => {
+    const input = document.getElementById(button.getAttribute('aria-controls'));
+    button.addEventListener('click', () => {
+        const visible = input.type === 'password';
+        input.type = visible ? 'text' : 'password';
+        button.setAttribute('aria-pressed', String(visible));
+        button.textContent = visible ? 'Hide' : 'Show';
+    });
+});
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted && document.body.dataset.authenticated === 'true') window.location.reload();
+});
+
+const accountMenu = document.querySelector('.account-menu');
+if (accountMenu) {
+    accountMenu.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            accountMenu.open = false;
+            accountMenu.querySelector('summary').focus();
+        }
+    });
+    document.addEventListener('click', (event) => {
+        if (!accountMenu.contains(event.target)) accountMenu.open = false;
+    });
+}
+
+
+// Link secrets stay out of HTTP URLs, browser storage, and subsequent history entries.
+const accountLinkForm = document.querySelector('[data-account-link]');
+if (accountLinkForm) {
+    const parameters = new URLSearchParams(window.location.hash.slice(1));
+    const code = parameters.get('token');
+    const entry = accountLinkForm.querySelector('[data-recovery-entry]');
+    const input = entry.querySelector('[name="recovery_code"]');
+    if (code && /^[A-Za-z0-9_-]{43}$/.test(code)) {
+        input.value = code;
+        entry.hidden = true;
+    }
+    if (parameters.has('token')) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
 }

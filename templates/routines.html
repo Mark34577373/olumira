@@ -26,6 +26,7 @@
 		<div class="routine-entry">
 			<div class="routine-row">
 				<form class="task-form routine-task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="return_to" value="routines">
 					<button type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="routine-check" aria-hidden="true">
@@ -36,7 +37,8 @@
 				</form>
 
 				<div class="routine-actions">
-					<form method="post" action="{{ url_for('routines.delete_routine_route', routine_id=routine['id']) }}" onsubmit="return confirm('Delete this routine?')">
+					<form method="post" action="{{ url_for('routines.delete_routine_route', routine_id=routine['id']) }}" data-confirm="Delete this routine?">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 						<button type="submit" class="routine-delete" aria-label="Delete {{ routine['name'] }}">Delete</button>
 					</form>
 				</div>
@@ -45,6 +47,7 @@
 			<details class="routine-edit">
 				<summary>Edit <span class="visually-hidden">{{ routine['name'] }}</span></summary>
 				<form class="routine-edit-form" method="post" action="{{ url_for('routines.edit_routine_route', routine_id=routine['id']) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					<input class="routine-input" name="name" type="text" value="{{ routine['name'] }}" maxlength="80" required aria-label="Routine name">
 					<input class="routine-input" name="category" type="text" value="{{ routine['category'] }}" maxlength="40" list="category-options" aria-label="Category">
 					<button type="submit" class="routine-button">Save</button>
@@ -62,6 +65,7 @@
 	<div class="routine-manage-panel">
 		<h2>Add a routine</h2>
 		<form method="post" action="{{ url_for('routines.add_routine_route') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<div class="routine-field">
 				<label for="routine-name">Name</label>
 				<input class="routine-input" id="routine-name" name="name" type="text" maxlength="80" required placeholder="e.g., Go for a walk">
@@ -77,6 +81,7 @@
 	<div class="routine-manage-panel">
 		<h2>Add a template</h2>
 		<form method="post" action="{{ url_for('routines.add_template_route') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 			<div class="routine-field">
 				<label for="routine-template">Template</label>
 				<select class="routine-input" id="routine-template" name="template">

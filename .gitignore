@@ -29,3 +29,7 @@ database/backups/
 .env.*
 !.env.example
 artifacts/
+
+# Private local recovery email previews
+*.eml
+database/mail-preview/

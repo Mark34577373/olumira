@@ -2,6 +2,8 @@
 import tempfile
 import unittest
 from pathlib import Path
+import uuid
+from support import create_user, login, post
 
 from flask_migrate import upgrade
 
@@ -12,7 +14,7 @@ class InterfaceTests(unittest.TestCase):
         cls.temp = tempfile.TemporaryDirectory()
         from olumira import create_app
         from services.routines import get_routines
-        cls.app = create_app({'APP_ENV': 'testing', 'DATABASE': str(Path(cls.temp.name) / 'test.db')})
+        cls.app = create_app({'APP_ENV': 'testing', 'DATABASE': str(Path(cls.temp.name) / 'test.db'), 'AUTH_LOGIN_IP_LIMIT': '1000 per minute', 'AUTH_LOGIN_ACCOUNT_LIMIT': '1000 per minute'})
         with cls.app.app_context():
             upgrade()
         cls.get_routines = staticmethod(get_routines)
@@ -23,9 +25,9 @@ class InterfaceTests(unittest.TestCase):
 
     def setUp(self):
         self.client = self.app.test_client()
-        self.client.get('/')
-        with self.client.session_transaction() as session:
-            self.owner = session['owner_id']
+        self.email = uuid.uuid4().hex + '@example.com'
+        self.user_id, self.owner = create_user(self.app, self.email)
+        login(self.client, self.email)
 
     def routines(self):
         with self.app.app_context():
@@ -44,27 +46,27 @@ class InterfaceTests(unittest.TestCase):
     def test_completion_shared_between_pages_and_owners(self):
         routine = self.routines()[0]
         path = f'/routines/{routine["id"]}/toggle'
-        self.assertEqual(self.client.post(path).status_code, 302)
+        self.assertEqual(post(self.client, path).status_code, 302)
         for route in ['/', '/routines']:
             self.assertIn('aria-pressed="true"', self.client.get(route).get_data(as_text=True))
         self.assertIn('20<small>%', self.client.get('/').get_data(as_text=True))
         other = self.app.test_client()
-        self.assertEqual(other.post(path).status_code, 404)
-        self.client.post(path)
+        self.assertEqual(post(other, path).status_code, 302)
+        post(self.client, path)
         self.assertEqual(self.routines()[0]['completed'], 0)
 
     def test_routine_management(self):
-        self.client.post('/routines/add', data={'name': 'Test walk', 'category': 'Afternoon'})
+        post(self.client, '/routines/add', data={'name': 'Test walk', 'category': 'Afternoon'})
         routine = self.routines()[-1]
-        self.client.post(f'/routines/{routine["id"]}/edit', data={'name': 'Short walk', 'category': 'Afternoon'})
+        post(self.client, f'/routines/{routine["id"]}/edit', data={'name': 'Short walk', 'category': 'Afternoon'})
         self.assertIn('Short walk', self.client.get('/routines').get_data(as_text=True))
-        self.client.post(f'/routines/{routine["id"]}/delete')
+        post(self.client, f'/routines/{routine["id"]}/delete')
         self.assertNotIn('Short walk', self.client.get('/routines').get_data(as_text=True))
-        self.client.post('/routines/add-template', data={'template': 'Bedtime'})
+        post(self.client, '/routines/add-template', data={'template': 'Bedtime'})
         self.assertIn('Lights out', self.client.get('/routines').get_data(as_text=True))
 
     def test_observation_updates_dashboard_and_escapes_html(self):
-        response = self.client.post('/observations', data={'activity': '<script>test</script>', 'date': '2026-10-16', 'notes': 'A fictional test observation', 'mood': 'Calm', 'tags': 'test'}, follow_redirects=True)
+        response = post(self.client, '/observations', data={'activity': '<script>test</script>', 'date': '2026-10-16', 'notes': 'A fictional test observation', 'mood': 'Calm', 'tags': 'test'}, follow_redirects=True)
         self.assertEqual(response.status_code, 200)
         html = self.client.get('/').get_data(as_text=True)
         self.assertIn('&lt;script&gt;test&lt;/script&gt;', html)
@@ -81,7 +83,7 @@ class InterfaceTests(unittest.TestCase):
         self.assertIn('No observations yet', html)
 
     def test_invalid_observation_keeps_input_and_reports_error(self):
-        response = self.client.post('/observations', data={'activity': 'Fictional retained input', 'date': '2026-02-30', 'notes': 'Keep these notes'})
+        response = post(self.client, '/observations', data={'activity': 'Fictional retained input', 'date': '2026-02-30', 'notes': 'Keep these notes'})
         self.assertEqual(response.status_code, 422)
         self.assertIn('role="alert"', response.text)
         self.assertIn('Fictional retained input', response.text)
@@ -90,7 +92,7 @@ class InterfaceTests(unittest.TestCase):
 
     def test_invalid_routine_does_not_change_records(self):
         before = len(self.routines())
-        response = self.client.post('/routines/add', data={'name': 'x' * 81, 'category': 'General'}, follow_redirects=True)
+        response = post(self.client, '/routines/add', data={'name': 'x' * 81, 'category': 'General'}, follow_redirects=True)
         self.assertIn('role="alert"', response.text)
         self.assertEqual(len(self.routines()), before)
 

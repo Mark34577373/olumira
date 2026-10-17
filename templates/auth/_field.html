@@ -1,0 +1,11 @@
+{% macro auth_field(field, autocomplete, hint='', password=false) %}
+<div class="auth-field">
+    {{ field.label }}
+    <div class="{% if password %}password-input{% endif %}">
+        {{ field(class_='routine-input', autocomplete=autocomplete, maxlength=128 if password else (80 if field.short_name == 'display_name' else (43 if field.short_name == 'recovery_code' else 254)), **{'spellcheck': 'false', 'autocapitalize': 'none', 'aria-invalid': 'true' if field.errors else 'false', 'aria-describedby': field.id ~ '-hint ' ~ field.id ~ '-error'}) }}
+        {% if password %}<button type="button" class="password-toggle" data-password-toggle aria-controls="{{ field.id }}" aria-pressed="false" aria-label="Show or hide {{ field.label.text|lower }}">Show</button>{% endif %}
+    </div>
+    <p class="auth-hint" id="{{ field.id }}-hint">{{ hint }}</p>
+    <div id="{{ field.id }}-error">{% for message in field.errors %}<p class="auth-field-error">{{ message }}</p>{% endfor %}</div>
+</div>
+{% endmacro %}

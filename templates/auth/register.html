@@ -1,0 +1,18 @@
+{% extends 'auth/layout.html' %}
+{% from 'auth/_field.html' import auth_field %}
+{% block title %}Create an account | Olumira{% endblock %}
+{% block auth_content %}
+<p class="eyebrow">A FRESH START</p>
+<h1>A little more support.</h1>
+<p class="auth-description">Create your account to organize your day, one small step at a time.</p>
+{% if form.errors %}<p class="ui-alert ui-alert-error" role="alert">Please check the highlighted fields.</p>{% endif %}
+<form method="post" action="{{ url_for('auth.register') }}" class="auth-form">
+    {{ form.hidden_tag() }}
+    {{ auth_field(form.display_name, 'nickname', 'The name you’d like to use in Olumira.') }}
+    {{ auth_field(form.email, 'email') }}
+    {{ auth_field(form.password, 'new-password', 'Use 15–128 characters. Choose a long, unique passphrase.', password=true) }}
+    {{ auth_field(form.confirm_password, 'new-password', password=true) }}
+    <button class="routine-button auth-submit" type="submit">Create account</button>
+</form>
+<p class="auth-footer">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

@@ -1,0 +1,2 @@
+{% extends 'emails/base.html' %}
+{% block content %}<h1 style="font-size:24px">Your email changed</h1><p>Your Olumira sign-in email was updated and verified. All previous sessions have ended.</p><p>{% if new_email %}Your new sign-in address is {{ new_email }}.{% endif %}</p><p>If this wasn’t you, <a href="{{ link }}">request a password reset</a>.</p><p>Never share your password.</p>{% endblock %}

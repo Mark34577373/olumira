@@ -1,0 +1,9 @@
+Olumira
+
+Your email changed
+
+Your Olumira sign-in email was updated and verified. All previous sessions have ended.
+{% if new_email %}Your new sign-in address is {{ new_email }}.{% endif %}
+
+If this was not you, use the password recovery page: {{ link }}
+Never share your password.

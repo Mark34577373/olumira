@@ -11,6 +11,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
+sys.path.insert(0, str(ROOT / 'tests'))
+from test_account_recovery import email_link
 from flask_migrate import upgrade
 from playwright.sync_api import sync_playwright
 from werkzeug.serving import make_server
@@ -22,7 +24,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--baseline', action='store_true')
     args = parser.parse_args()
-    artifacts = ROOT / 'artifacts' / ('before-day14' if args.baseline else 'after-day14')
+    artifacts = ROOT / 'artifacts' / ('before-day16' if args.baseline else 'after-day16')
     artifacts.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as temp:
         app = create_app({'APP_ENV': 'testing', 'DATABASE': str(Path(temp) / 'browser.db')})
@@ -33,6 +35,7 @@ def main():
         worker = threading.Thread(target=server.serve_forever, daemon=True)
         worker.start()
         origin = f'http://127.0.0.1:{server.server_port}'
+        app.config['PUBLIC_APP_URL'] = origin
         failures, checks, console_errors = [], [], []
         try:
             with sync_playwright() as playwright:
@@ -41,6 +44,39 @@ def main():
                 page.on('pageerror', lambda error: console_errors.append(str(error)))
                 page.on('console', lambda msg: console_errors.append(msg.text) if msg.type == 'error' else None)
                 widths = [1440, 1280, 1024, 768, 390, 320]
+                # Auth pages are rendered at every requested size before signing in.
+                for width in widths:
+                    page.set_viewport_size({'width': width, 'height': 1000})
+                    for name in ('login', 'register'):
+                        page.goto(origin + '/auth/' + name)
+                        assert page.locator('h1').count() == 1
+                        assert not page.evaluate('document.documentElement.scrollWidth > innerWidth')
+                        assert page.locator('input[name=csrf_token]').count() == 1
+                        page.screenshot(path=str(artifacts / f'{name}-{width}.png'), full_page=True)
+                        checks.append(f'/auth/{name} at {width}px')
+                # Register through the real CSRF-protected form; no automatic login.
+                page.locator('#display_name').fill('Fictional browser caregiver')
+                page.locator('#email').fill('fictional-browser@example.com')
+                page.locator('#password').fill('Fictional browser passphrase 42')
+                toggle = page.locator('[aria-controls=password]')
+                toggle.click()
+                assert page.locator('#password').get_attribute('type') == 'text'
+                toggle.click()
+                assert page.locator('#password').get_attribute('type') == 'password'
+                page.locator('#confirm_password').fill('Fictional browser passphrase 42')
+                page.locator('.auth-submit').click()
+                assert page.url.endswith('/auth/check-email')
+                _, verification_link, _ = email_link(app, 'verify_email')
+                page.goto(verification_link)
+                page.locator('.auth-submit').click()
+                assert page.get_by_role('heading', name='Email verified', exact=True).is_visible()
+                page.goto(origin + '/auth/login')
+                page.locator('#email').fill('fictional-browser@example.com')
+                page.locator('#password').fill('Fictional browser passphrase 42')
+                page.locator('.auth-submit').click()
+                page.wait_for_url(origin + '/')
+                checks += ['registration without automatic login', 'email verification from encrypted test inbox', 'password visibility', 'login']
+
                 routes = ['/', '/routines', '/communication', '/observations', '/resources']
                 for width in widths:
                     page.set_viewport_size({'width': width, 'height': 1000})
@@ -100,7 +136,7 @@ def main():
                     page.goto(origin + '/observations')
                     page.locator('#observation-activity').fill('Fictional browser check')
                     page.locator('#observation-notes').fill('Test data in a temporary database only.')
-                    page.locator('button[type=submit]').click()
+                    page.locator('.observation-form button[type=submit]').click()
                     assert page.get_by_role('status').is_visible()
                     page.goto(origin)
                     assert page.get_by_role('heading', name='Fictional browser check').is_visible()
@@ -136,9 +172,50 @@ def main():
                     nojs = browser.new_context(java_script_enabled=False, viewport={'width': 320, 'height': 900})
                     fallback = nojs.new_page()
                     fallback.goto(origin)
+                    assert '/auth/login' in fallback.url
+                    fallback.locator('#email').fill('fictional-browser@example.com')
+                    fallback.locator('#password').fill('Fictional browser passphrase 42')
+                    fallback.locator('.auth-submit').click()
+                    assert fallback.url == origin + '/'
                     assert fallback.get_by_role('link', name='Resources', exact=True).first.is_visible()
                     assert not fallback.evaluate('document.documentElement.scrollWidth > innerWidth')
                     nojs.close()
+                    # Account-menu keyboard support and CSRF-protected logout.
+                    page.locator('.account-menu summary').focus()
+                    page.keyboard.press('Enter')
+                    assert page.locator('.account-menu').get_attribute('open') is not None
+                    page.keyboard.press('Escape')
+                    assert page.locator('.account-menu').get_attribute('open') is None
+                    page.locator('.account-menu summary').click()
+                    page.get_by_role('button', name='Sign out', exact=True).click()
+                    assert '/auth/login' in page.url
+                    page.goto(origin + '/observations')
+                    assert '/auth/login' in page.url
+                    checks += ['account menu keyboard/Escape', 'logout and protected-route denial']
+                    # A second account must not inherit the first account's custom board.
+                    page.goto(origin + '/auth/register')
+                    page.locator('#display_name').fill('Second fictional caregiver')
+                    page.locator('#email').fill('second-browser@example.com')
+                    page.locator('#password').fill('Another fictional passphrase 42')
+                    page.locator('#confirm_password').fill('Another fictional passphrase 42')
+                    page.locator('.auth-submit').click()
+                    _, verification_link, _ = email_link(app, 'verify_email')
+                    page.goto(verification_link)
+                    page.locator('.auth-submit').click()
+                    page.goto(origin + '/auth/login')
+                    page.locator('#email').fill('second-browser@example.com')
+                    page.locator('#password').fill('Another fictional passphrase 42')
+                    page.locator('.auth-submit').click()
+                    page.wait_for_url(origin + '/')
+                    assert page.get_by_role('heading', name='Fictional browser check').count() == 0
+                    page.goto(origin + '/communication')
+                    assert page.get_by_role('button', name='Fictional break', exact=True).count() == 0
+                    page.evaluate("localStorage.setItem('olumira.customCommunication.v1', JSON.stringify([{id:'old',name:'Legacy fictional marker',icon:'☀',message:'Test only',category:'Needs'}]))")
+                    page.reload()
+                    assert page.get_by_role('button', name='Legacy fictional marker', exact=True).count() == 0
+                    checks += ['second-account observation isolation', 'account-namespaced communication choices', 'legacy browser choices quarantined']
+
+
                     checks += ['sampled text contrast on all five pages', 'visible task focus', 'resource detail focus and restoration', 'keyboard skip link', 'mobile menu and Escape', 'keyboard routine completion and persistence', 'observation save/dashboard', 'communication selection/custom persistence/dialog', 'resource filters/details', 'reduced motion', 'no-JavaScript navigation']
                 browser.close()
             failures.extend(console_errors)
@@ -155,4 +232,8 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception:
+        print('Browser check failed; details redacted to keep account-link codes out of logs.')
+        sys.exit(1)

@@ -104,13 +104,19 @@ class PersistenceTests(unittest.TestCase):
             backup_sqlite(self.root / 'absent.db', self.root / 'new.db')
 
     def test_adopt_legacy_schema_preserves_records(self):
-        self.seed()
-        with db.engine.begin() as connection:
-            connection.execute(text('DROP TABLE alembic_version'))
-        result = self.app.test_cli_runner().invoke(args=['adopt-legacy-sqlite', '--backup', str(self.root / 'legacy-backup.db')])
-        self.assertEqual(result.exit_code, 0, result.output)
-        self.assertEqual(db.session.execute(text('SELECT version_num FROM alembic_version')).scalar(), '0001')
-        self.assertEqual(len(get_routines('fictional-test-owner')), 5)
+        legacy = self.make_app('legacy.db')
+        with legacy.app_context():
+            upgrade(revision='0001')
+            self.seed()
+            with db.engine.begin() as connection:
+                connection.execute(text('DROP TABLE alembic_version'))
+            result = legacy.test_cli_runner().invoke(args=['adopt-legacy-sqlite', '--backup', str(self.root / 'legacy-backup.db')])
+            self.assertEqual(result.exit_code, 0, result.output)
+            self.assertEqual(db.session.execute(text('SELECT version_num FROM alembic_version')).scalar(), '0001')
+            db.session.rollback()
+            upgrade()
+            self.assertEqual(len(get_routines('fictional-test-owner')), 5)
+
 
     def test_separate_factories_have_isolated_databases(self):
         self.seed()
@@ -119,3 +125,41 @@ class PersistenceTests(unittest.TestCase):
             upgrade()
             self.assertEqual(db.session.scalar(select(db.func.count()).select_from(Routine)), 0)
         self.assertEqual(len(get_routines('fictional-test-owner')), 5)
+
+    def test_legacy_transfer_refuses_to_drop_account_records(self):
+        from services.authentication import register_user
+        register_user('fictional-transfer@example.com', 'Fictional transfer', 'Fictional transfer passphrase 42')
+        destination = self.make_app('account-destination.db')
+        with destination.app_context():
+            upgrade()
+            with self.assertRaises(ValueError):
+                transfer_sqlite(self.root / 'main.db', self.root / 'account-backup.db')
+            self.assertEqual(db.session.scalar(select(db.func.count()).select_from(Owner)), 0)
+
+    def test_day15_records_survive_day16_upgrade(self):
+        from werkzeug.security import generate_password_hash
+        from services.authentication import PASSWORD_METHOD
+        from support import PASSWORD
+        from olumira.models import User, AuthSession
+        legacy = self.make_app('day15-accounts.db')
+        digest = 'e' * 64
+        user_id = '1' * 32
+        password_hash = generate_password_hash(PASSWORD, method=PASSWORD_METHOD)
+        with legacy.app_context():
+            upgrade(revision='0002')
+            ensure_workspace('legacy-account-owner')
+            # Seed the actual Day 15 schema without referencing Day 16 model columns.
+            with db.engine.begin() as connection:
+                connection.execute(text('INSERT INTO users (id,email,password_hash,display_name,email_verified,created_at,updated_at,owner_id) VALUES (:id,:email,:hash,:name,:verified,:created,:created,:owner)'),
+                    dict(id=user_id, email='fictional-legacy@example.com', hash=password_hash, name='Fictional legacy account',
+                         verified=True, created='2026-10-16 12:00:00.000000', owner='legacy-account-owner'))
+                connection.execute(text('INSERT INTO auth_sessions (token_hash,user_id,created_at,expires_at,last_seen_at,revoked_at) VALUES (:digest,:id,1,9999999999,1,NULL)'), dict(digest=digest, id=user_id))
+            upgrade()
+            user = db.session.get(User, user_id)
+            self.assertEqual(user.password_hash, password_hash)
+            self.assertTrue(user.email_verified)
+            self.assertEqual(user.auth_version, 0)
+            self.assertIsNone(user.pending_email)
+            self.assertEqual(db.session.get(AuthSession, digest).auth_version, 0)
+            self.assertEqual(db.session.get(AuthSession, digest).expires_at, 9999999999)
+            self.assertEqual(len(get_routines('legacy-account-owner')), 5)

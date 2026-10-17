@@ -1,0 +1,13 @@
+{% extends 'auth/layout.html' %}
+{% block title %}Verify your email | Olumira{% endblock %}
+{% block auth_content %}
+<p class="eyebrow">ONE SMALL STEP</p><h1>Verify your email</h1>
+<p class="auth-description">Confirm <strong class="wrap-anywhere">{{ current_user.email }}</strong> to open your routines, communication tools, observations, and resources.</p>
+<p>Open your verification email and confirm the link. Your account settings are available while you wait.</p>
+<form method="post" action="{{ url_for('auth.resend_verification') }}" class="auth-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <input type="hidden" name="email" value="{{ current_user.email }}">
+    <button class="routine-button" type="submit">Resend verification email</button>
+</form>
+<p class="auth-footer"><a href="{{ url_for('auth.settings') }}">Account settings</a> · <a href="{{ url_for('auth.verify_email') }}">Enter a verification code</a></p>
+{% endblock %}

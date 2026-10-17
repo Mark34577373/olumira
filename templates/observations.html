@@ -28,6 +28,7 @@
 	</div>
 
 	<form class="observation-form" method="post" action="{{ url_for('observations.observations') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 		<div class="observation-form-grid">
             <div class="observation-field-wide">{{ input_field('observation-activity', 'Activity', 'activity', form_values['activity'], required=true, placeholder='e.g., Outdoor play') }}</div>
 

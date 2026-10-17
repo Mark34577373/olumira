@@ -1,0 +1,20 @@
+{% extends 'auth/layout.html' %}
+{% from 'auth/_field.html' import auth_field %}
+{% from 'components/ui.html' import alert %}
+{% set heading = 'Choose a new password' if kind == 'reset' else ('Confirm your new email' if kind == 'change' else 'Confirm your email') %}
+{% block title %}{{ heading }} | Olumira{% endblock %}
+{% block auth_content %}
+<p class="eyebrow">YOUR OLUMIRA ACCOUNT</p><h1>{{ heading }}</h1>
+<p class="auth-description">{{ 'Use a unique passphrase to keep your account protected.' if kind == 'reset' else 'Confirm the email link to finish this step. You’ll sign in again afterward.' }}</p>
+{% if error %}{{ alert(error, 'error') }}{% elif form.errors %}{{ alert('Please check the highlighted fields.', 'error') }}{% endif %}
+<form method="post" class="auth-form" data-account-link>
+    {{ form.hidden_tag() }}
+    <div data-recovery-entry>{{ auth_field(form.recovery_code, 'off', 'Open the email link or paste the code from the email here.') }}</div>
+    {% if kind == 'reset' %}
+    {{ auth_field(form.password, 'new-password', 'Use 15–128 characters.', password=true) }}
+    {{ auth_field(form.confirm_password, 'new-password', password=true) }}
+    {% endif %}
+    <button class="routine-button auth-submit" type="submit">{{ 'Reset password' if kind == 'reset' else ('Confirm new email' if kind == 'change' else 'Verify email') }}</button>
+</form>
+<p class="auth-footer">{% if kind == 'change' %}<a href="{{ url_for('auth.settings') }}">Request a new change in account settings</a>{% else %}<a href="{{ url_for('auth.forgot_password' if kind == 'reset' else 'auth.resend_verification') }}">Request a fresh link</a>{% endif %} · <a href="{{ url_for('auth.login') }}">Sign in</a></p>
+{% endblock %}

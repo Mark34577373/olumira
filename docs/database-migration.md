@@ -2,7 +2,7 @@
 
 ## Current schema and compatibility
 
-The initial Alembic revision is `0001`. It represents the existing schema, not a redesign of the records:
+The initial Alembic revision is `0001`; the current head is `0003` (users, revocable sessions, account recovery, and encrypted email queue). See the [Day 16 runbook](day-16-account-recovery.md) before enabling account/recovery flows. Baseline 0001 represents the original tables below; later revisions add account functionality without rewriting those records:
 
 | Table | Columns and relationships |
 | --- | --- |
@@ -55,11 +55,11 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app db current
 ```
 
-The expected revision is 0001. Run upgrade again to confirm it is a no-op. PostgreSQL is configured through psycopg with connection pre-ping. Use the provider's required TLS parameters; app settings never turn TLS verification off. Do not expose connection strings in screenshots/logs.
+The expected destination revision is 0003. Run upgrade again to confirm it is a no-op. PostgreSQL is configured through psycopg with connection pre-ping. Use the provider's required TLS parameters; app settings never turn TLS verification off. Do not expose connection strings in screenshots/logs.
 
 ## 3. Transfer into the empty, migrated target
 
-With `DATABASE_URL` pointing at the intended empty target:
+With `DATABASE_URL` pointing at the intended empty target (including empty user/session/token/email-outbox tables):
 
 ```sh
 venv/bin/python -m flask --app app transfer-sqlite \
@@ -67,7 +67,7 @@ venv/bin/python -m flask --app app transfer-sqlite \
   --backup database/backups/cutover-source.db
 ```
 
-The command first snapshots the source and imports from that snapshot. It refuses any nonempty application table or an unexpected migration revision. All source IDs, nullable metadata, ownership, and completion dates are preserved. It compares every destination row and each table's count before commit, then resets PostgreSQL integer sequences so subsequent inserts cannot collide with imported IDs. The original SQLite database is never removed or overwritten. Verification failures roll back the complete destination import.
+The command first snapshots the source and imports from that snapshot. It refuses any nonempty application/account/session/token/mail table or an unexpected migration revision. It also refuses source databases containing users, sessions, account tokens, or queued emails: this legacy-only importer must never silently omit account data. All source IDs, nullable metadata, ownership, and completion dates are preserved. It compares every destination row and each table's count before commit, then resets PostgreSQL integer sequences so subsequent inserts cannot collide with imported IDs. The original SQLite database is never removed or overwritten. Verification failures roll back the complete destination import.
 
 The transfer command itself is designed for either an isolated local destination or an explicitly approved production cutover. **Do not run it against a hosted destination until the destination, maintenance window, and cutover are approved.** No production transfer has been performed here.
 

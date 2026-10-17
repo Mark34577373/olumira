@@ -33,6 +33,7 @@
 				<h3 class="task-group-title">{{ category }}</h3>
 				{% for routine in items %}
 				<form class="task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 					<input type="hidden" name="return_to" value="dashboard">
 					<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
 						<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
