@@ -269,14 +269,14 @@ def main():
                 page.reload()
                 page.locator(".speech-settings summary").click()
                 assert page.locator("#phrase-written").inner_text() == ""
-                assert not page.locator("#speech-enabled").is_checked()
+                assert page.locator("#speech-enabled").is_checked()
                 page.get_by_role("button", name="Water please", exact=True).click()
                 assert page.locator("#phrase-written").inner_text() == "I want water"
                 assert page.evaluate(
                     "Object.keys(localStorage).filter(k=>k.startsWith('olumira.speechSettings')).every(k=>!localStorage.getItem(k).includes('I want water'))"
                 )
                 checks.append(
-                    "Day 26: focus/Escape preserve phrase; network save failure retains message; retry succeeds and explicit save stays on board, saved phrase reopens, drafts clear on reload and only speech preferences persist locally"
+                    "Day 26: focus/Escape preserve phrase; network save failure retains message; retry succeeds and explicit save stays on board, saved phrase reopens, drafts clear on reload and server profile defaults take precedence when reopened"
                 )
                 stage = "speech errors, asynchronous voices and unsupported browser"
                 page.locator("#speech-enabled").check()

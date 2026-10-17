@@ -148,6 +148,8 @@ def board_view(board_id):
         cards=boards.cards_for(board.id),
         phrases=boards.phrases(),
         creation_key=uuid.uuid4().hex,
+        preferences=personalization.as_dict(),
+        board_options=personalization.board_choices(),
     )
 
 
@@ -158,7 +160,9 @@ def board_state(board_id):
     board = boards.find(board_id)
     if board.archived_at:
         abort(409)
-    return jsonify(version=board.version)
+    return jsonify(
+        version=board.version, preferences_version=personalization.get().version
+    )
 
 
 @bp.post("/communication/<board_id>/manage/<action>")
@@ -251,3 +255,136 @@ def phrase_action(phrase_id, action):
             409,
         )
     return redirect(url_for("communication.phrase_editor"))
+
+
+from services import communication_preferences as personalization
+
+
+@bp.route("/communication/settings", methods=["GET", "POST"])
+def communication_settings():
+    require("communication.manage")
+    if not g.profile_id:
+        return render_template("communication/select_profile.html")
+    values = personalization.as_dict()
+    error = None
+    status = 200
+    if request.method == "POST":
+        if (
+            request.form.get("scope_profile") != g.profile_id
+            or request.form.get("scope_workspace") != g.workspace_id
+        ):
+            abort(409)
+        values = dict(request.form)
+        try:
+            personalization.save(values)
+        except boards.InvalidCommunication as exc:
+            error, status = str(exc), (
+                409 if isinstance(exc, boards.CommunicationConflict) else 422
+            )
+        else:
+            flash("Communication preferences saved for this profile.", "success")
+            return redirect(url_for("communication.communication_settings"))
+    return (
+        render_template(
+            "communication/settings.html",
+            values=values,
+            error=error,
+            choices=personalization.board_choices(),
+        ),
+        status,
+    )
+
+
+@bp.get("/communication/open")
+def open_personal_board():
+    board = personalization.default_board()
+    return redirect(
+        url_for("communication.board_view", board_id=board.id)
+        if board
+        else (
+            url_for("communication.favorite_board")
+            if any(personalization.favorites())
+            else url_for("communication.communication")
+        )
+    )
+
+
+@bp.get("/communication/favorites")
+def favorite_board():
+    card_rows, phrase_rows = personalization.favorites()
+    from types import SimpleNamespace
+
+    board = SimpleNamespace(
+        id="",
+        title="Favorite choices",
+        description="Familiar pictures and phrases for this profile.",
+        layout="adaptive",
+        version=personalization.favorites_version(),
+        archived_at=None,
+    )
+    return render_template(
+        "communication/board.html",
+        board=board,
+        cards=[c for _, c, _ in card_rows],
+        phrases=[p for _, p in phrase_rows],
+        creation_key=uuid.uuid4().hex,
+        preferences=personalization.as_dict(),
+        board_options=personalization.board_choices(),
+        favorite_view=True,
+    )
+
+
+@bp.get("/communication/favorites/manage")
+def manage_favorites():
+    require("communication.manage")
+    if not g.profile_id:
+        return render_template("communication/select_profile.html")
+    choices = personalization.board_choices()
+    selected = (
+        boards.find(request.args["board"])
+        if request.args.get("board")
+        else choices[0] if choices else None
+    )
+    return render_template(
+        "communication/favorites.html",
+        board_choices=choices,
+        selected=selected,
+        candidates=boards.cards_for(selected.id) if selected else [],
+        phrase_choices=boards.phrases(),
+        card_rows=personalization.favorites(True)[0],
+        phrase_rows=personalization.favorites(True)[1],
+        pref=personalization.get(),
+    )
+
+
+@bp.post("/communication/favorites/<kind>/<target>/<action>")
+def favorite_action(kind, target, action):
+    if (
+        request.form.get("scope_profile") != g.profile_id
+        or request.form.get("scope_workspace") != g.workspace_id
+    ):
+        abort(409)
+    try:
+        personalization.change_favorite(
+            kind, target, action, request.form.get("version")
+        )
+    except boards.InvalidCommunication as error:
+        return (
+            render_template(
+                "error.html",
+                code=409,
+                heading="Review your favorites",
+                message=str(error),
+            ),
+            409,
+        )
+    return redirect(url_for("communication.manage_favorites"))
+
+
+@bp.get("/communication/favorites/state")
+def favorite_state():
+    require("communication.view")
+    return jsonify(
+        version=personalization.favorites_version(),
+        preferences_version=personalization.get().version,
+    )

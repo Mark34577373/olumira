@@ -302,6 +302,9 @@ def save(values, board_id=None):
         if any(c.get("id") and c["id"] not in existing for c in items):
             abort(404)
         if board.profile_id != clean["profile_id"]:
+            from olumira.models import CommunicationPreference, FavoriteCommunicationCard
+            if db.session.scalar(select(CommunicationPreference.profile_id).where(CommunicationPreference.default_board_id==board.id).limit(1)) or db.session.scalar(select(FavoriteCommunicationCard.card_id).join(Card,Card.id==FavoriteCommunicationCard.card_id).where(Card.board_id==board.id).limit(1)):
+                raise InvalidCommunication('This board is a default or has favorite cards. Duplicate it for another profile instead.')
             capacity(clean["profile_id"], board.id)
         for k, v in clean.items():
             setattr(board, k, v)

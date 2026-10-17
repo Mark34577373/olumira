@@ -156,3 +156,13 @@ at `/communication/quick`; no automatic publication/import into shared data occu
 Back up, migrate and restart with matching code. The legacy-only transfer refuses
 communication tables. Downgrades refuse deletion; use a reviewed backup restore.
 See [the communication runbook](day-25-26-communication.md).
+
+
+## Days 27–28 personalization and caregiver workflows
+
+Current head is `0013`. `0012` adds profile preferences and favorite references;
+`0013` adds tasks, immutable handoffs, recipient acknowledgments and task links.
+Both are additive with scope/history guards and preserve all previous rows/columns.
+Stop writers and verify a complete backup before upgrading; restart matching code.
+The legacy-only transfer refuses these new records. Downgrades refuse data deletion;
+rollback requires a reviewed backup/code/key restore. See [the runbook](day-27-28.md).

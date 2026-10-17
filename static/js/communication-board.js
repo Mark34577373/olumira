@@ -14,9 +14,12 @@
  const removeLast=root.querySelector('#remove-last-word'),clear=root.querySelector('#clear-phrase'),saveOpen=root.querySelector('#save-phrase-open');
  const notice=root.querySelector('#board-access-notice');
  const synth=window.speechSynthesis,supported=!!synth&&typeof window.SpeechSynthesisUtterance==='function'&&['speak','cancel','getVoices'].every(k=>typeof synth[k]==='function');
+ const switcher=root.querySelector('#active-communication-board');if(switcher)switcher.addEventListener('change',()=>{if(switcher.value)location.assign(switcher.value);});
+ const simple=root.querySelector('#simplified-toggle');if(simple)simple.addEventListener('click',()=>{const active=root.classList.toggle('simplified-board');simple.setAttribute('aria-pressed',String(active));simple.textContent=active?'More controls':'Fewer controls';});
  const storageKey=`olumira.speechSettings.v1.${root.dataset.preferencesKey}`;
  let words=[],voices=[],lastSpoken='',sequence=0,access=true,settings={enabled:true,voice:'',rate:'1'};
  try{const saved=JSON.parse(localStorage.getItem(storageKey)||'null');if(saved&&typeof saved.enabled==='boolean'&&['0.8','1','1.15'].includes(saved.rate)&&typeof saved.voice==='string'&&saved.voice.length<=300)settings=saved;}catch(_){}
+ if(root.dataset.profilePreferences==='true')settings={enabled:root.dataset.speechEnabled==='true',voice:root.dataset.voiceId,rate:root.dataset.speechRate};
  enabled.checked=settings.enabled;rate.value=settings.rate;
  const text=()=>words.map(word=>word.text).join(' ');
  const available=()=>supported&&enabled.checked&&voices.length>0&&access;
@@ -45,7 +48,7 @@
   try {voices=synth.getVoices().filter(v=>v.localService===true);} catch (_) {voices=[];}
   voiceSelect.replaceChildren();
   if(!voices.length){const option=new Option('No local voice available','');voiceSelect.add(option);voiceSelect.disabled=true;status.textContent='No local voice is available yet. Pictures and your written message still work.';}
-  else{voiceSelect.disabled=false;voices.forEach(v=>voiceSelect.add(new Option(`${v.name} (${v.lang})`,v.voiceURI)));voiceSelect.value=voices.some(v=>v.voiceURI===settings.voice)?settings.voice:voices[0].voiceURI;status.textContent=enabled.checked?'Ready to speak. Choose a picture.':'Speech is off.';}
+  else{voiceSelect.disabled=false;voices.forEach(v=>voiceSelect.add(new Option(`${v.name} (${v.lang})`,v.voiceURI)));voiceSelect.value=voices.some(v=>v.voiceURI===settings.voice)?settings.voice:voices[0].voiceURI;status.textContent=enabled.checked?(settings.voice&&!voices.some(v=>v.voiceURI===settings.voice)?'The preferred voice is unavailable here. A local voice is ready.':'Ready to speak. Choose a picture.'):'Speech is off.';}
   controls();
  };
  if(supported){if(typeof synth.addEventListener==='function')synth.addEventListener('voiceschanged',refreshVoices);else synth.onvoiceschanged=refreshVoices;}
@@ -88,7 +91,7 @@
     access=false;words=[];lastSpoken='';stop('This board is no longer available.');update();grid.querySelectorAll('button').forEach(b=>b.disabled=true);notice.hidden=false;notice.textContent='Your sign-in, access, or board status changed. Exit this board and reopen it to continue.';clearInterval(timer);return;
    }
    if(!response.ok)throw new Error();const state=await response.json();
-   if(String(state.version)!==root.dataset.version){grid.querySelectorAll('button').forEach(b=>b.disabled=true);notice.hidden=false;notice.textContent='A caregiver changed this board. Your current message is still visible. Reopen the board to load the latest pictures.';}
+   if(String(state.version)!==root.dataset.version || String(state.preferences_version)!==root.dataset.preferencesVersion){grid.querySelectorAll('button').forEach(b=>b.disabled=true);notice.hidden=false;notice.textContent='A caregiver changed this board. Your current message is still visible. Reopen the board to load the latest pictures.';}
   }catch(_){notice.hidden=false;notice.textContent='Connection interrupted. You can use the pictures on this page. Reconnect before saving new phrases.';}
  };
  const timer=setInterval(checkAccess,30000);document.addEventListener('visibilitychange',checkAccess);

@@ -407,3 +407,88 @@ class SavedCommunicationPhrase(db.Model):
     created_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class CommunicationPreference(db.Model):
+    __tablename__ = 'communication_preferences'
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False, index=True)
+    card_size = db.Column(db.String(12), nullable=False, default='medium')
+    layout = db.Column(db.String(12), nullable=False, default='board')
+    text_position = db.Column(db.String(12), nullable=False, default='below')
+    show_text = db.Column(db.Boolean, nullable=False, default=True)
+    show_symbols = db.Column(db.Boolean, nullable=False, default=True)
+    speech_enabled = db.Column(db.Boolean, nullable=False, default=True)
+    speech_rate = db.Column(db.String(5), nullable=False, default='1')
+    voice_id = db.Column(db.String(300), nullable=False, default='')
+    simplified = db.Column(db.Boolean, nullable=False, default=False)
+    high_contrast = db.Column(db.Boolean, nullable=False, default=False)
+    reduced_motion = db.Column(db.Boolean, nullable=False, default=False)
+    default_board_id = db.Column(db.String(32), db.ForeignKey('communication_boards.id',ondelete='SET NULL'))
+    version = db.Column(db.Integer, nullable=False, default=1)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow,onupdate=utcnow)
+
+
+class FavoriteCommunicationCard(db.Model):
+    __tablename__ = 'favorite_communication_cards'
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'), primary_key=True)
+    card_id = db.Column(db.String(32), db.ForeignKey('communication_cards.id',ondelete='CASCADE'), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+
+
+class FavoriteCommunicationPhrase(db.Model):
+    __tablename__ = 'favorite_communication_phrases'
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'), primary_key=True)
+    phrase_id = db.Column(db.String(32), db.ForeignKey('saved_communication_phrases.id',ondelete='CASCADE'), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+
+
+class CaregiverTask(db.Model):
+    __tablename__ = 'caregiver_tasks'
+    __table_args__ = (db.CheckConstraint("status IN ('todo','in_progress','completed','canceled')", name='ck_care_task_status'),db.CheckConstraint("priority IN ('low','normal','high')",name='ck_care_task_priority'),db.Index('ix_tasks_scope_due','workspace_id','profile_id','due_at'))
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.String(2000), nullable=False,default='')
+    assigned_to = db.Column(db.String(32),db.ForeignKey('users.id'))
+    routine_id = db.Column(db.Integer,db.ForeignKey('routines.id'))
+    due_at = db.Column(db.DateTime(timezone=True))
+    timezone = db.Column(db.String(64),nullable=False)
+    priority = db.Column(db.String(8),nullable=False,default='normal')
+    status = db.Column(db.String(16),nullable=False,default='todo')
+    version = db.Column(db.Integer,nullable=False,default=1)
+    created_by = db.Column(db.String(32),db.ForeignKey('users.id'),nullable=False)
+    completed_by = db.Column(db.String(32),db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow,onupdate=utcnow)
+    completed_at = db.Column(db.DateTime(timezone=True))
+
+
+class CaregiverHandoff(db.Model):
+    __tablename__ = 'caregiver_handoffs'
+    __table_args__ = (db.Index('ix_handoffs_scope_created','workspace_id','profile_id','created_at'),)
+    id = db.Column(db.String(32),primary_key=True)
+    workspace_id = db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),nullable=False)
+    profile_id = db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    summary = db.Column(db.String(2000),nullable=False)
+    recipient_kind = db.Column(db.String(8),nullable=False)
+    routine_id = db.Column(db.Integer,db.ForeignKey('routines.id'))
+    observation_id = db.Column(db.Integer,db.ForeignKey('observations.id'))
+    created_by = db.Column(db.String(32),db.ForeignKey('users.id'),nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+
+
+class HandoffRecipient(db.Model):
+    __tablename__ = 'handoff_recipients'
+    handoff_id = db.Column(db.String(32),db.ForeignKey('caregiver_handoffs.id'),primary_key=True)
+    user_id = db.Column(db.String(32),db.ForeignKey('users.id'),primary_key=True)
+    acknowledged_at = db.Column(db.DateTime(timezone=True))
+
+
+class HandoffTask(db.Model):
+    __tablename__ = 'handoff_tasks'
+    handoff_id = db.Column(db.String(32),db.ForeignKey('caregiver_handoffs.id'),primary_key=True)
+    task_id = db.Column(db.String(32),db.ForeignKey('caregiver_tasks.id'),primary_key=True)

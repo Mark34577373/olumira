@@ -52,11 +52,11 @@ def create_app(config=None):
 
     csrf.init_app(app)
 
-    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces
-    for module in (dashboard, routines, communication, observations, resources, auth, workspaces):
+    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care
+    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care):
         app.register_blueprint(module.bp)
 
-    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces'}
+    protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care'}
 
     @login_manager.unauthorized_handler
     def require_login():
@@ -83,6 +83,12 @@ def create_app(config=None):
             return redirect(url_for('workspaces.index'))
         if request.method == 'POST' and request.blueprint != 'workspaces':
             permission = {
+                'care.task_editor': 'care.manage',
+                'care.task_status': 'care.manage',
+                'care.handoff_editor': 'care.manage',
+                'care.acknowledge': 'care.acknowledge',
+                'communication.communication_settings': 'communication.manage',
+                'communication.favorite_action': 'communication.manage',
                 'communication.board_editor': 'communication.manage',
                 'communication.board_action': 'communication.manage',
                 'communication.phrase_editor': 'communication.manage',

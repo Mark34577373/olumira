@@ -27,7 +27,9 @@ def dashboard_context(owner_id):
     timezone = current_app.config["APP_TIMEZONE"]
     upcoming_routines = upcoming(timezone)
     completed_runs, saved_runs = today_summary(timezone)
+    from services.care_coordination import dashboard as coordination_dashboard
     return dict(
+        **coordination_dashboard(),
         greeting=time_greeting(),
         routine_groups=groups,
         completed_routines=completed,

@@ -39,6 +39,8 @@ from services import (
     routine_scheduling as scheduling,
     routine_sessions as runs,
     communication as communication,
+    communication_preferences as personalization,
+    care_coordination as coordination,
 )
 
 
@@ -201,7 +203,29 @@ def main():
                     board_values["title"] = (
                         "Basic Needs" if not chosen else "Fictional Fern’s choices"
                     )
-                    communication.save(board_values)
+                    board_id, _ = communication.save(board_values)
+                    if chosen:
+                        personalization.save(
+                            dict(
+                                version=0,
+                                card_size="large",
+                                layout="2",
+                                text_position="below",
+                                show_text="on",
+                                show_symbols="on",
+                                speech_enabled="on",
+                                speech_rate="0.8",
+                                voice_id="",
+                                simplified="on",
+                                high_contrast="",
+                                reduced_motion="on",
+                                default_board_id=board_id,
+                            )
+                        )
+                        for card in communication.cards_for(board_id)[:3]:
+                            personalization.change_favorite(
+                                "card", card.id, "add", personalization.get().version
+                            )
                     communication.save_phrase(
                         dict(
                             label="Water please",
@@ -215,6 +239,30 @@ def main():
                             text="I want a break.",
                             creation_key=uuid.uuid4().hex,
                         )
+                    )
+                    task_id, _ = coordination.save_task(
+                        dict(
+                            title="Prepare the woodland story cards",
+                            description="Fictional demonstration only: use the familiar pictures before the guided routine.",
+                            profile_id=chosen or "",
+                            assigned_to=users[1].id,
+                            routine_id=rid,
+                            due_at="",
+                            timezone="America/Chicago",
+                            priority="normal",
+                            creation_key=uuid.uuid4().hex,
+                        )
+                    )
+                    coordination.create_handoff(
+                        dict(
+                            summary="Fictional handoff: the visual morning routine is paused after three steps. Review it together when ready.",
+                            profile_id=chosen or "",
+                            recipient=users[1].id,
+                            routine_id=rid,
+                            observation_id="",
+                            creation_key=uuid.uuid4().hex,
+                        ),
+                        [task_id],
                     )
         access = (
             Path(tempfile.gettempdir()) / f"olumira-preview-{args.port}-access.json"

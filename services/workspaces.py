@@ -22,6 +22,7 @@ READ = frozenset(
         "routines.view",
         "observations.view",
         "communication.view",
+        "care.view",
     }
 )
 WRITE = frozenset(
@@ -34,6 +35,8 @@ WRITE = frozenset(
         "observations.create",
         "observations.edit",
         "communication.manage",
+        "care.manage",
+        "care.acknowledge",
     }
 )
 PERMISSIONS = {
