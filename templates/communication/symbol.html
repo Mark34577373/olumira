@@ -1,0 +1,23 @@
+{# Original Olumira line drawings. Stable identifiers; no external or uploaded assets. #}
+{% macro symbol(name) -%}<svg viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{% if name=='water' %}<path d="M32 7C27 17 15 29 15 39a17 17 0 0 0 34 0C49 29 37 17 32 7Z"/><path d="M22 39c0 6 4 10 10 10"/>
+{% elif name in ['food','eat'] %}<path d="M17 8v17c0 7 12 7 12 0V8m-6 0v47M45 8c-8 9-9 23 0 23h4V8Zm4 23v24"/>
+{% elif name=='bathroom' %}<path d="M12 12h18v22H12Zm4 22h37c0 14-10 15-15 15v7H22v-7c-7-3-10-8-10-15Zm18-15h16v15M18 20h6"/>
+{% elif name=='help' %}<circle cx="32" cy="32" r="24"/><path d="M32 18v28M18 32h28"/>
+{% elif name=='break' %}<circle cx="32" cy="32" r="24"/><path d="M25 21v22m14-22v22"/>
+{% elif name in ['rest','tired'] %}<path d="M10 41h44v12H10Zm4 0V27h16v14m0-9h24v9M10 53v5m44-5v5M36 12h13L36 23h13"/>
+{% elif name in ['happy','sad','excited','frustrated','calm'] %}<circle cx="32" cy="32" r="24"/>{% if name=='calm' %}<path d="m19 27 5 2 5-2m6 0 5 2 5-2M23 39c6 4 12 4 18 0"/>{% elif name=='frustrated' %}<path d="m18 22 10 5m8 0 10-5m-23 5v2m18-2v2M23 44q9-9 18 0"/>{% else %}<path d="M23 25v3m18-3v3"/>{% if name=='sad' %}<path d="M22 44q10-14 20 0"/>{% elif name=='excited' %}<path d="M20 36h24c0 18-24 18-24 0Z"/>{% else %}<path d="M20 38q12 16 24 0"/>{% endif %}{% endif %}
+{% elif name=='read' %}<path d="M32 15C22 8 13 9 7 12v40c10-3 16-2 25 4 9-6 15-7 25-4V12c-6-3-15-4-25 3Zm0 0v41M14 21l11 2m-11 7 11 2m14-9 11-2m-11 11 11-2"/>
+{% elif name=='play' %}<path d="m32 7 23 14v26L32 59 9 47V21Zm0 26v26M9 21l23 12 23-12M21 14l23 14"/>
+{% elif name=='walk' %}<circle cx="36" cy="11" r="5"/><path d="m31 24 9 10 13 2M31 23l-9 10-12 2m21-12-3 19 12 15m-12-15L17 56"/>
+{% elif name=='music' %}<path d="M27 46V14l26-6v31M27 23l26-6"/><ellipse cx="18" cy="48" rx="9" ry="7"/><ellipse cx="44" cy="41" rx="9" ry="7"/>
+{% elif name=='draw' %}<path d="m12 42 30-30 11 11-30 30-15 4Zm23-23 11 11M12 42l11 11m22-44 4-4 11 11-4 4"/>
+{% elif name in ['person','family'] %}<circle cx="32" cy="17" r="9"/><path d="M16 56V43c0-19 32-19 32 0v13"/>{% if name=='family' %}<circle cx="10" cy="28" r="5"/><circle cx="54" cy="28" r="5"/><path d="M2 53V42c0-8 11-8 14-4m32 0c3-4 14-4 14 4v11"/>{% endif %}
+{% elif name=='want' %}<path d="M9 44h15l12-12c4-4 10 2 6 6l-7 7h13l8-8c5-4 9 2 5 6L49 56H9ZM9 37v21"/><path d="M26 14c-10-14-24 6 0 19 24-13 10-33 0-19Z"/>
+{% elif name=='yes' %}<circle cx="32" cy="32" r="24"/><path d="m18 32 10 10 18-22"/>
+{% elif name=='no' %}<circle cx="32" cy="32" r="24"/><path d="m22 22 20 20m0-20L22 42"/>
+{% elif name in ['home','school'] %}<path d="m5 29 27-22 27 22M12 25v31h40V25M27 56V38h11v18"/>{% if name=='school' %}<circle cx="32" cy="26" r="5"/><path d="M17 39h3m24 0h3"/>{% endif %}
+{% elif name=='outside' %}<path d="M33 55V36M17 55h36M32 9 16 31h9L12 43h40L39 31h9Z"/>
+{% elif name=='thanks' %}<path d="m32 12-11 24 4 17h14l4-17-11-24Zm0 0v41M10 13l5 4m39-4-5 4M32 3v3"/>
+{% elif name=='bag' %}<rect x="13" y="17" width="38" height="41" rx="7"/><path d="M23 17v-6c0-8 18-8 18 0v6M20 38h24v13H20Zm-7-10h38"/>
+{% endif %}</svg>{%- endmacro %}

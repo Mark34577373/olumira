@@ -145,3 +145,14 @@ completion dates. Back up before upgrading, verify preserved rows and foreign ke
 and restart with matching application code. The legacy-only transfer refuses these
 records rather than discarding them. Downgrade requires an explicitly reviewed
 backup restore. See [the Days 23–24 runbook](day-23-24-routines.md).
+
+
+## Days 25–26 communication tables
+
+Current head is `0011`. Migration `0010` adds private communication boards/cards;
+`0011` adds explicitly saved profile/workspace phrases. Both are additive and leave
+all existing rows/columns unchanged. Browser-only choices are preserved separately
+at `/communication/quick`; no automatic publication/import into shared data occurs.
+Back up, migrate and restart with matching code. The legacy-only transfer refuses
+communication tables. Downgrades refuse deletion; use a reviewed backup restore.
+See [the communication runbook](day-25-26-communication.md).

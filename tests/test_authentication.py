@@ -212,7 +212,7 @@ class AuthenticationTests(unittest.TestCase):
             observation = db.session.scalar(select(Observation).where(Observation.activity == 'Second only'))
             self.assertEqual(observation.owner_id, other_owner)
             self.assertEqual(db.session.get(Routine, first_routine).name, 'Wake up')
-        html = self.client.get('/communication').text
+        html = self.client.get('/communication/quick').text
         self.assertIn(f'data-storage-scope="{other_id}.{other_owner}.workspace"', html)
         self.assertNotIn(f'data-storage-scope="{first_id}"', html)
 

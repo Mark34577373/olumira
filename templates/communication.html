@@ -1,85 +1,10 @@
-{% extends "base.html" %}
-
-{% block title %}Communication | Olumira{% endblock %}
-
-{% block content %}
-
-{% if g.profile %}<p class="ui-alert">{{ g.profile.display_name }} · {{ g.profile.communication or 'No communication preferences added yet.' }}</p>{% endif %}
-<p class="auth-hint">Built-in communication choices are available to everyone in this workspace. Custom choices stay in this browser for your account and selected profile; they are not shared with other caregivers.</p>
-<div class="communication-page" id="communication-app" data-can-write="{{ 'true' if can('communication.manage') else 'false' }}" data-storage-scope="{{ current_user.id }}.{{ g.workspace_id }}.{{ g.profile_id or 'workspace' }}">
-	<header class="page-header communication-header">
-		<div>
-			<p class="eyebrow">COMMUNICATION</p>
-			<h1>What do you need?</h1>
-		</div>
-		<button type="button" class="add-communication-button" id="open-communication-dialog" {% if not can('communication.manage') %}hidden disabled{% endif %}>
-			<span aria-hidden="true">＋</span>
-			<span>Add Communication</span>
-		</button>
-	</header>
-
-	<div class="communication-workspace">
-		<div class="communication-choices">
-			{% for category in communication_categories %}
-			<section class="communication-category" data-category="{{ category }}" aria-labelledby="category-{{ loop.index }}">
-				<h2 id="category-{{ loop.index }}">{{ category }}</h2>
-				<div class="communication-options">
-					{% for option in communication_options if option["category"] == category %}
-					<button type="button" class="communication-option" data-communication-option data-id="{{ option['id'] }}" data-name="{{ option['name'] }}" data-icon="{{ option['icon'] }}" data-message="{{ option['message'] }}" data-category="{{ option['category'] }}" aria-pressed="false">
-						<span class="communication-option-icon" aria-hidden="true">{{ option["icon"] }}</span>
-						<span class="communication-option-name">{{ option["name"] }}</span>
-					</button>
-					{% endfor %}
-				</div>
-				<div class="custom-communication-options" data-custom-options="{{ category }}"></div>
-			</section>
-			{% endfor %}
-		</div>
-
-		<section class="communication-display" aria-live="polite" aria-atomic="true" aria-label="Selected communication">
-			<div class="communication-empty" id="communication-empty">
-				<span class="communication-empty-mark" aria-hidden="true">…</span>
-				<p>No message selected</p>
-			</div>
-			<div class="communication-message" id="communication-message" hidden>
-				<span class="communication-message-icon" id="communication-message-icon" aria-hidden="true"></span>
-				<h2 id="communication-message-name"></h2>
-				<p id="communication-message-text"></p>
-			</div>
-		</section>
-	</div>
-
-	<dialog class="communication-dialog" id="communication-dialog" aria-labelledby="communication-dialog-title">
-		<form id="communication-form">
-			<div class="communication-dialog-header">
-				<div>
-					<p class="eyebrow">CUSTOM</p>
-					<h2 id="communication-dialog-title">Add communication</h2>
-				</div>
-				<button type="button" class="dialog-close" id="close-communication-dialog" aria-label="Close dialog">×</button>
-			</div>
-
-			<label for="communication-name">Name</label>
-			<input id="communication-name" name="name" type="text" maxlength="40" required>
-
-			<label for="communication-icon">Icon</label>
-			<input id="communication-icon" name="icon" type="text" maxlength="8" required>
-
-			<label for="communication-message-input">Message</label>
-			<input id="communication-message-input" name="message" type="text" maxlength="100" required>
-
-			<label for="communication-category">Category</label>
-			<select id="communication-category" name="category">
-				<option value="Needs">Needs</option>
-				<option value="Activities">Activities</option>
-			</select>
-
-			<div class="communication-dialog-actions">
-				<button type="button" class="dialog-cancel" id="cancel-communication-dialog">Cancel</button>
-				<button type="submit" class="dialog-submit">Add</button>
-			</div>
-		</form>
-	</dialog>
-</div>
-
+{% extends 'base.html' %}{% from 'communication/symbol.html' import symbol %}{% block title %}Communication boards | Olumira{% endblock %}{% block content %}
+<header class="routine-library-heading"><div><p class="eyebrow">WORDS, IN YOUR OWN WAY</p><h1>Your communication boards</h1><p>Familiar pictures. Meaningful choices. Made for {{ g.profile.display_name if g.profile else g.workspace.name }}.</p></div>{% if can('communication.manage') %}<a class="routine-button" href="{{ url_for('communication.board_editor') }}">Create board</a>{% endif %}</header>
+{% if g.profile %}<p class="ui-alert">{{ g.profile.display_name }} · {{ g.profile.communication or 'Choose the words and pictures that feel familiar.' }}</p>{% endif %}
+<div class="board-library-links"><a class="text-link" href="{{ url_for('communication.quick_choices') }}">Quick choices &amp; existing browser cards →</a>{% if can('communication.manage') %}<a class="text-link" href="{{ url_for('communication.phrase_editor') }}">Manage quick phrases →</a>{% endif %}</div>
+<form method="get" class="calendar-filters"><div><label for="board-search">Search boards</label><input id="board-search" name="q" value="{{ query }}" maxlength="100"></div><div><label for="board-category">Category</label><select id="board-category" name="category"><option value="">All categories</option>{% for choice in categories %}<option{% if choice==category %} selected{% endif %}>{{ choice }}</option>{% endfor %}</select></div><div><label for="board-state">Show</label><select id="board-state" name="status">{% for key,label in [('active','Active boards'),('archived','Archived boards'),('all','All boards')] %}<option value="{{ key }}"{% if state==key %} selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="routine-button">Find boards</button></form>
+<p>{{ total }} board{{ 's' if total!=1 else '' }} · {{ g.profile.display_name if g.profile else 'Workspace boards' }}</p>
+<div class="board-library-grid">{% for board in boards %}<article class="board-library-card"><div class="board-mini-preview" aria-hidden="true">{% for card in cards[board.id][:4] %}<span class="tone-{{ card.color }}">{{ symbol(card.symbol) }}</span>{% else %}<span>{{ symbol('want') }}</span>{% endfor %}</div><p class="eyebrow">{{ board.category }}{% if board.archived_at %} · Archived{% endif %}</p><h2>{{ board.title }}</h2><p>{{ board.description|truncate(120) }}</p><p>{{ cards[board.id]|length }} cards · {{ g.profile.display_name if g.profile else 'Workspace board' }}</p><a class="routine-button" href="{{ url_for('communication.board_view',board_id=board.id) }}">{{ 'View archived board' if board.archived_at else 'Open board' }}</a>{% if can('communication.manage') %}<details class="board-options"><summary>Manage <span class="visually-hidden">{{ board.title }}</span></summary>{% if not board.archived_at %}<a class="text-link" href="{{ url_for('communication.board_editor',board_id=board.id) }}">Edit board</a>{% endif %}<form method="post" action="{{ url_for('communication.board_action',board_id=board.id,action='duplicate') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="version" value="{{ board.version }}"><input type="hidden" name="creation_key" value="{{ new_key().hex }}"><label for="copy-{{ board.id }}">Copy to</label><select id="copy-{{ board.id }}" name="profile_id"><option value="">Workspace boards</option>{% for p in g.profiles %}<option value="{{ p.id }}"{% if p.id==g.profile_id %} selected{% endif %}>{{ p.display_name }}</option>{% endfor %}</select><button class="text-button">Duplicate board</button></form><form method="post" action="{{ url_for('communication.board_action',board_id=board.id,action='restore' if board.archived_at else 'archive') }}"{% if not board.archived_at %} data-confirm="Archive this board? Its cards will be kept."{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="version" value="{{ board.version }}"><button class="text-button">{{ 'Restore board' if board.archived_at else 'Archive board' }}</button></form></details>{% endif %}</article>{% else %}<section class="ui-empty"><h2>A little choice goes a long way</h2><p>{{ 'No boards match these filters. Try another search.' if query or category or state!='active' else 'Create a board, or choose a starting point below. Your existing quick choices are still available.' }}</p></section>{% endfor %}</div>
+<nav class="calendar-navigation" aria-label="Board pages">{% if page>1 %}<a href="{{ url_for('communication.communication',page=page-1,q=query,category=category,status=state) }}">← Previous page</a>{% endif %}{% if page*18<total %}<a href="{{ url_for('communication.communication',page=page+1,q=query,category=category,status=state) }}">Next page →</a>{% endif %}</nav>
+{% if can('communication.manage') %}<section class="board-templates"><p class="eyebrow">A STARTING POINT, MADE YOUR OWN</p><h2>Choose a starter board</h2><div class="board-library-grid">{% for key,choice in templates.items() %}<a class="board-template" href="{{ url_for('communication.board_editor',template=key) }}"><span>{{ symbol(choice.symbols[0]) }}</span><strong>{{ choice.title }}</strong><small>6 editable cards →</small></a>{% endfor %}</div></section>{% endif %}
 {% endblock %}

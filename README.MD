@@ -34,7 +34,7 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0009`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0011`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -163,7 +163,7 @@ ordering, starter sequences, search, duplication and reversible archive/restore.
 Daily checklists remain separate from multi-step sequence previews. Scheduling and
 guided execution are the next review stages, not enabled placeholders.
 
-Day 22 introduced migration **0007**; the current head is **0009**. Back up and migrate before starting the new
+Day 22 introduced migration **0007**; the current head is **0011**. Back up and migrate before starting the new
 application version. See the [Day 22 report](docs/day-22-routine-builder.md) for
 history preservation, permissions, tests, deployment instructions and limitations.
 Run `venv/bin/python tests/browser/check_routine_builder.py` for the fictional demo.
@@ -178,3 +178,19 @@ caregiver attribution. **History & saved runs** retains frozen sequence snapshot
 Run `flask --app app db upgrade` with the project environment before restarting.
 See [behavior, architecture, migrations, demo and deployment instructions](docs/day-23-24-routines.md)
 and [verification evidence](docs/day-23-24-verification.md).
+
+
+### Days 25–26: visual communication
+
+**Communication** now contains shared, profile-scoped picture boards and a visual
+caregiver editor. **Open board** launches a separate focused experience with large
+original picture cards, a phrase strip and prominent Speak controls. Browser-native
+speech uses local voices only; written communication remains available without it.
+Saved phrases persist across authorized caregivers; active messages stay in page
+memory. Existing browser custom choices remain under **Quick choices**.
+
+Migrate to **0011** before restarting. No new dependency or environment variable.
+Custom uploads stay disabled until durable private media storage is configured.
+See [setup, privacy, speech compatibility and rollback](docs/day-25-26-communication.md)
+and [verification](docs/day-25-26-verification.md). A disposable fictional preview
+can be started with `venv/bin/python scripts/preview_routines.py --port 5054`.

@@ -47,7 +47,7 @@ def create_app(config=None):
         # Maximum valid 30-step UTF-8 forms can exceed the default 64 KiB after
         # URL encoding. Increase only these bounded builder POSTs, before CSRF
         # parses the body; account and other forms retain the stricter limit.
-        if request.method == 'POST' and request.endpoint in {'routines.new_routine', 'routines.edit_builder'}:
+        if request.method == 'POST' and request.endpoint in {'routines.new_routine', 'routines.edit_builder', 'communication.board_editor'}:
             request.max_content_length = 256 * 1024
 
     csrf.init_app(app)
@@ -83,6 +83,10 @@ def create_app(config=None):
             return redirect(url_for('workspaces.index'))
         if request.method == 'POST' and request.blueprint != 'workspaces':
             permission = {
+                'communication.board_editor': 'communication.manage',
+                'communication.board_action': 'communication.manage',
+                'communication.phrase_editor': 'communication.manage',
+                'communication.phrase_action': 'communication.manage',
                 'routines.routine_schedule': 'routines.edit',
                 'routines.schedule_action': 'routines.edit',
                 'routines.start_session': 'routines.complete',

@@ -344,7 +344,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertNotIn("Add a routine", viewer.get("/routines").text)
         self.assertNotIn("Save observation", viewer.get("/observations").text)
         self.assertIn("Read-only access", viewer.get("/").text)
-        self.assertIn("hidden disabled", viewer.get("/communication").text)
+        self.assertIn("hidden disabled", viewer.get("/communication/quick").text)
 
     def test_caregiver_can_edit_content_not_admin(self):
         client, _, _ = self.add_member()

@@ -140,7 +140,7 @@ def main():
                     assert page.get_by_role('status').is_visible()
                     page.goto(origin)
                     assert page.get_by_role('heading', name='Fictional browser check').is_visible()
-                    page.goto(origin + '/communication')
+                    page.goto(origin + '/communication/quick')
                     page.get_by_role('button', name='Thirsty', exact=True).click()
                     assert page.locator('#communication-message-text').inner_text() == 'I want water.'
                     page.locator('#open-communication-dialog').click()
@@ -208,7 +208,7 @@ def main():
                     page.locator('.auth-submit').click()
                     page.wait_for_url(origin + '/')
                     assert page.get_by_role('heading', name='Fictional browser check').count() == 0
-                    page.goto(origin + '/communication')
+                    page.goto(origin + '/communication/quick')
                     assert page.get_by_role('button', name='Fictional break', exact=True).count() == 0
                     page.evaluate("localStorage.setItem('olumira.customCommunication.v1', JSON.stringify([{id:'old',name:'Legacy fictional marker',icon:'☀',message:'Test only',category:'Needs'}]))")
                     page.reload()

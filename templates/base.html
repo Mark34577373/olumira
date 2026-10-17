@@ -22,7 +22,7 @@
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-links" hidden>Menu <span aria-hidden="true">☰</span></button>
         <div class="nav-links" id="primary-links">
             {% for endpoint, label in [('dashboard.dashboard', 'Dashboard'), ('routines.routines', 'Routines'), ('communication.communication', 'Communication'), ('observations.observations', 'Observations'), ('resources.resources', 'Resources')] %}
-            <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint or (endpoint == 'routines.routines' and request.blueprint == 'routines') %}aria-current="page"{% endif %}>{{ label }}</a>
+            <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint or (endpoint == 'routines.routines' and request.blueprint == 'routines') or (endpoint == 'communication.communication' and request.blueprint == 'communication') %}aria-current="page"{% endif %}>{{ label }}</a>
             {% endfor %}
         </div>
         {% endif %}

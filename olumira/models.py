@@ -355,3 +355,55 @@ class RoutineLaunchRequest(db.Model):
     session_id = db.Column(
         db.String(32), db.ForeignKey("routine_sessions.id"), nullable=False
     )
+
+
+class CommunicationBoard(db.Model):
+    __tablename__ = 'communication_boards'
+    __table_args__ = (db.CheckConstraint("layout IN ('2','3','4','adaptive')", name='ck_board_layout'),
+        db.Index('ix_boards_scope_updated','workspace_id','profile_id','updated_at'))
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
+    title = db.Column(db.String(80), nullable=False)
+    description = db.Column(db.String(500), nullable=False, default='')
+    category = db.Column(db.String(40), nullable=False)
+    layout = db.Column(db.String(12), nullable=False, default='adaptive')
+    version = db.Column(db.Integer, nullable=False, default=1)
+    archived_at = db.Column(db.DateTime(timezone=True))
+    created_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    cards = db.relationship('CommunicationCard', back_populates='board', lazy='raise', order_by='CommunicationCard.position', cascade='all, delete-orphan')
+
+
+class CommunicationCard(db.Model):
+    __tablename__ = 'communication_cards'
+    __table_args__ = (db.UniqueConstraint('board_id','position',name='uq_communication_card_position'),
+        db.CheckConstraint('position >= 0',name='ck_communication_card_position'))
+    id = db.Column(db.String(32), primary_key=True)
+    board_id = db.Column(db.String(32), db.ForeignKey('communication_boards.id', ondelete='CASCADE'), nullable=False, index=True)
+    label = db.Column(db.String(60), nullable=False)
+    spoken_text = db.Column(db.String(200), nullable=False)
+    symbol = db.Column(db.String(32), nullable=False)
+    color = db.Column(db.String(16), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+    board = db.relationship('CommunicationBoard', back_populates='cards', lazy='raise')
+
+
+class SavedCommunicationPhrase(db.Model):
+    __tablename__ = 'saved_communication_phrases'
+    __table_args__ = (db.CheckConstraint('position >= 0',name='ck_saved_phrase_position'),
+        db.Index('ix_saved_phrases_scope_order','workspace_id','profile_id','position'))
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
+    label = db.Column(db.String(60), nullable=False)
+    text = db.Column(db.String(1000), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    version = db.Column(db.Integer, nullable=False, default=1)
+    archived_at = db.Column(db.DateTime(timezone=True))
+    created_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)

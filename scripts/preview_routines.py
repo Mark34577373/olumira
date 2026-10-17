@@ -38,6 +38,7 @@ from services import (
     routine_builder as builder,
     routine_scheduling as scheduling,
     routine_sessions as runs,
+    communication as communication,
 )
 
 
@@ -48,14 +49,14 @@ def main():
     if not 1024 <= args.port <= 65535:
         parser.error("Choose a port between 1024 and 65535.")
     origin = f"http://127.0.0.1:{args.port}"
-    with tempfile.TemporaryDirectory(prefix="olumira-day24-fictional-") as directory:
+    with tempfile.TemporaryDirectory(prefix="olumira-fictional-") as directory:
         app = create_app(
             {
                 "APP_ENV": "development",
                 "DATABASE": str(Path(directory) / "preview.db"),
                 "DATABASE_URL": None,
                 "SECRET_KEY": secrets.token_urlsafe(48),
-                "SESSION_COOKIE_NAME": f"olumira_day24_preview_{args.port}",
+                "SESSION_COOKIE_NAME": f"olumira_preview_{args.port}",
                 "PUBLIC_APP_URL": origin,
                 "MAIL_BACKEND": "development",
                 "TRUSTED_HOSTS": ["127.0.0.1", "localhost"],
@@ -196,9 +197,27 @@ def main():
                         )
                     run = runs.find(run_id)
                     runs.mutate(run_id, "pause", run.version, uuid.uuid4().hex)
+                    board_values = communication.template_draft("words")
+                    board_values["title"] = (
+                        "Basic Needs" if not chosen else "Fictional Fern’s choices"
+                    )
+                    communication.save(board_values)
+                    communication.save_phrase(
+                        dict(
+                            label="Water please",
+                            text="I want water.",
+                            creation_key=uuid.uuid4().hex,
+                        )
+                    )
+                    communication.save_phrase(
+                        dict(
+                            label="A break",
+                            text="I want a break.",
+                            creation_key=uuid.uuid4().hex,
+                        )
+                    )
         access = (
-            Path(tempfile.gettempdir())
-            / f"olumira-day24-preview-{args.port}-access.json"
+            Path(tempfile.gettempdir()) / f"olumira-preview-{args.port}-access.json"
         )
         descriptor = os.open(access, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
         with os.fdopen(descriptor, "w") as handle:

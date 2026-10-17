@@ -29,6 +29,9 @@ from olumira.models import (
     RoutineSessionStep,
     RoutineSessionEvent,
     RoutineLaunchRequest,
+    CommunicationBoard,
+    CommunicationCard,
+    SavedCommunicationPhrase,
 )
 
 MODELS = (Owner, Routine, Observation, RoutineCompletion)
@@ -159,6 +162,9 @@ def transfer_sqlite(source, backup):
             "routine_session_steps",
             "routine_session_events",
             "routine_launch_requests",
+            "communication_boards",
+            "communication_cards",
+            "saved_communication_phrases",
         ):
             if (
                 table in tables
@@ -185,7 +191,7 @@ def transfer_sqlite(source, backup):
         if connection.dialect.name == "postgresql":
             connection.execute(
                 text(
-                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests IN ACCESS EXCLUSIVE MODE"
+                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases IN ACCESS EXCLUSIVE MODE"
                 )
             )
         elif connection.dialect.name == "sqlite":
@@ -198,7 +204,7 @@ def transfer_sqlite(source, backup):
             or connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
-            != "0009"
+            != "0011"
         ):
             raise ValueError(
                 "Destination must be migrated to the supported revision first"
@@ -223,6 +229,9 @@ def transfer_sqlite(source, backup):
             RoutineSessionStep,
             RoutineSessionEvent,
             RoutineLaunchRequest,
+            CommunicationBoard,
+            CommunicationCard,
+            SavedCommunicationPhrase,
         ):
             if connection.execute(select(model.__table__).limit(1)).first() is not None:
                 raise ValueError("Destination is not empty; transfer refused")
