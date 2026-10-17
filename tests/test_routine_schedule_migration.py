@@ -38,16 +38,30 @@ class ScheduleMigrationTests(unittest.TestCase):
                         dict(ws=workspace),
                     )
 
+                original_columns = {}
+
                 def snapshot():
                     result = {}
                     with db.engine.connect() as connection:
                         for table in inspect(connection).get_table_names():
                             if table not in {"alembic_version", "sqlite_sequence"}:
+                                columns = original_columns.setdefault(
+                                    table,
+                                    [
+                                        column["name"]
+                                        for column in inspect(connection).get_columns(
+                                            table
+                                        )
+                                    ],
+                                )
+                                selected = ",".join(
+                                    '"' + column + '"' for column in columns
+                                )
                                 result[table] = sorted(
                                     [
                                         tuple(row)
                                         for row in connection.execute(
-                                            text(f'SELECT * FROM "{table}"')
+                                            text(f'SELECT {selected} FROM "{table}"')
                                         )
                                     ],
                                     key=repr,

@@ -4,3 +4,7 @@ pip-audit==2.10.1
 bandit==1.9.4
 playwright==1.64.0
 black==26.10.1
+
+# PDF content and visual verification
+pypdf==6.21.1
+pymupdf==1.28.2

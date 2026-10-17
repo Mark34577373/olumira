@@ -201,6 +201,9 @@ def transfer_sqlite(source, backup):
             raise ValueError(
                 "Legacy transfer refuses rich routine metadata; use a complete database migration"
             )
+        observation_columns = {row[1] for row in source_connection.execute("PRAGMA table_info(observations)")}
+        if "category" in observation_columns and source_connection.execute("SELECT 1 FROM observations WHERE category<>'General notes' OR author_id IS NOT NULL OR observed_at IS NOT NULL OR timezone IS NOT NULL OR created_at IS NOT NULL OR updated_at IS NOT NULL OR archived_at IS NOT NULL OR version<>1 OR session_id IS NOT NULL OR task_id IS NOT NULL LIMIT 1").fetchone():
+            raise ValueError("Legacy transfer refuses rich observation metadata; use a complete database migration")
     with db.engine.begin() as connection:
         if connection.dialect.name == "postgresql":
             connection.execute(
@@ -218,7 +221,7 @@ def transfer_sqlite(source, backup):
             or connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
-            != "0013"
+            != "0014"
         ):
             raise ValueError(
                 "Destination must be migrated to the supported revision first"

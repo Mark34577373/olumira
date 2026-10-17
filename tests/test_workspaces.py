@@ -822,6 +822,7 @@ class WorkspaceTests(unittest.TestCase):
         endpoint = "/observations/" + str(observation_id) + "/edit"
         values = {
             "activity": "Fictional updated",
+            "version": "1",
             "date": "2026-10-17",
             "notes": "Still fictional",
         }

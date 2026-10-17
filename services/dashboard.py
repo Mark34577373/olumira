@@ -22,7 +22,7 @@ def dashboard_context(owner_id):
     observation_count = db.session.scalar(
         select(func.count())
         .select_from(Observation)
-        .where(scope(Observation, owner_id))
+        .where(scope(Observation, owner_id), Observation.archived_at.is_(None))
     )
     timezone = current_app.config["APP_TIMEZONE"]
     upcoming_routines = upcoming(timezone)

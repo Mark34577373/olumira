@@ -219,7 +219,7 @@ def select_profile():
     if profile_id:
         get_profile(profile_id)
     session["profile_id"] = profile_id or None
-    return redirect(url_for("communication.open_personal_board" if request.form.get("return_to")=="communication" else "dashboard.dashboard"))
+    return redirect(url_for({"communication":"communication.open_personal_board","observations":"observations.timeline"}.get(request.form.get("return_to"),"dashboard.dashboard")))
 
 
 @bp.get("/profiles/<profile_id>")

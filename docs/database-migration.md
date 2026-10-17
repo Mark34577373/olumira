@@ -166,3 +166,7 @@ Both are additive with scope/history guards and preserve all previous rows/colum
 Stop writers and verify a complete backup before upgrading; restart matching code.
 The legacy-only transfer refuses these new records. Downgrades refuse data deletion;
 rollback requires a reviewed backup/code/key restore. See [the runbook](day-27-28.md).
+
+## Days 29–32 additive journal extension (0014)
+
+Head 0014 adds journal metadata and scope/time/category/completion indexes without rebuilding legacy tables. Existing authors/event/creation times remain unknown when not recorded. Observation author, creation and scope are preserved; linked sessions/tasks must match scope. No reporting tables or public file storage are added. Back up, migrate, restart, and follow [the Days 29–32 runbook](day-29-32.md). Legacy-only transfer refuses rich observation metadata rather than silently discarding it.

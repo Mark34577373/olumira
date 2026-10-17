@@ -83,8 +83,8 @@
 	<div class="observations-grid">
 		{% for observation in recent_observations %}
 		<div class="observation-card">
-			<span class="observation-date">{{ observation['date'] }}</span>
-			<h3>{{ observation['activity'] }}</h3>
+			<span class="observation-date">{{ journal_stamp(observation.observed_at,observation.timezone) if observation.observed_at else observation.date ~ ' · Time unknown' }}</span><p>{{ observation.category }}</p>
+			<h3><a href="{{ url_for('observations.detail',observation_id=observation.id) }}">{{ observation['activity'] }}</a></h3>
 			<p>{{ (observation['notes'] or 'A moment worth remembering.') | truncate(180) }}</p>
 		</div>
 		{% endfor %}

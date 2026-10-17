@@ -31,7 +31,7 @@ class Routine(db.Model):
 
 class Observation(db.Model):
     __tablename__ = 'observations'
-    __table_args__ = (db.Index('idx_observations_owner', 'owner_id'), {'sqlite_autoincrement': True})
+    __table_args__ = (db.Index('idx_observations_owner', 'owner_id'), db.Index('ix_observations_scope_time','workspace_id','profile_id','observed_at','id'), db.Index('ix_observations_scope_category','workspace_id','profile_id','category'), {'sqlite_autoincrement': True})
     id = db.Column(db.Integer, primary_key=True)
     workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), index=True)
     profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
@@ -41,6 +41,16 @@ class Observation(db.Model):
     notes = db.Column(db.Text)
     mood = db.Column(db.Text)
     tags = db.Column(db.Text)
+    category = db.Column(db.String(60), nullable=False, default='General notes', server_default='General notes')
+    author_id = db.Column(db.String(32), db.ForeignKey('users.id'))
+    observed_at = db.Column(db.DateTime(timezone=True))
+    timezone = db.Column(db.String(64))
+    created_at = db.Column(db.DateTime(timezone=True))
+    updated_at = db.Column(db.DateTime(timezone=True))
+    archived_at = db.Column(db.DateTime(timezone=True))
+    version = db.Column(db.Integer, nullable=False, default=1, server_default='1')
+    session_id = db.Column(db.String(32), db.ForeignKey('routine_sessions.id'))
+    task_id = db.Column(db.String(32), db.ForeignKey('caregiver_tasks.id'))
 
 
 class RoutineCompletion(db.Model):
@@ -286,6 +296,7 @@ class RoutineSession(db.Model):
         db.Index(
             "ix_sessions_scope_started", "workspace_id", "profile_id", "started_at"
         ),
+        db.Index("ix_sessions_scope_completed","workspace_id","profile_id","completed_at"),
     )
     id = db.Column(db.String(32), primary_key=True)
     routine_id = db.Column(
@@ -447,7 +458,7 @@ class FavoriteCommunicationPhrase(db.Model):
 
 class CaregiverTask(db.Model):
     __tablename__ = 'caregiver_tasks'
-    __table_args__ = (db.CheckConstraint("status IN ('todo','in_progress','completed','canceled')", name='ck_care_task_status'),db.CheckConstraint("priority IN ('low','normal','high')",name='ck_care_task_priority'),db.Index('ix_tasks_scope_due','workspace_id','profile_id','due_at'))
+    __table_args__ = (db.CheckConstraint("status IN ('todo','in_progress','completed','canceled')", name='ck_care_task_status'),db.CheckConstraint("priority IN ('low','normal','high')",name='ck_care_task_priority'),db.Index('ix_tasks_scope_due','workspace_id','profile_id','due_at'),db.Index('ix_tasks_scope_completed','workspace_id','profile_id','completed_at'))
     id = db.Column(db.String(32), primary_key=True)
     workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
     profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))

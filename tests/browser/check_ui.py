@@ -134,10 +134,11 @@ def main():
                     page.goto(origin + '/routines')
                     assert page.get_by_role('button',name='Mark Wake up incomplete',exact=True).get_attribute('aria-pressed') == 'true'
                     page.goto(origin + '/observations')
+                    page.locator('summary').filter(has_text='Add an observation').click()
                     page.locator('#observation-activity').fill('Fictional browser check')
                     page.locator('#observation-notes').fill('Test data in a temporary database only.')
-                    page.locator('.observation-form button[type=submit]').click()
-                    assert page.get_by_role('status').is_visible()
+                    page.locator('#observation-save-button').click()
+                    assert page.get_by_role('status').filter(has_text='Observation saved').is_visible()
                     page.goto(origin)
                     assert page.get_by_role('heading', name='Fictional browser check').is_visible()
                     page.goto(origin + '/communication/quick')

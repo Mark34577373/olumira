@@ -34,7 +34,7 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0013`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0014`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -208,3 +208,5 @@ Migrate to **0013** before restarting. No new dependencies or environment variab
 See [behavior, privacy, setup, demo and rollback](docs/day-27-28.md) and
 [verification](docs/day-27-28-verification.md). A disposable fictional preview is
 available via `venv/bin/python scripts/preview_routines.py --port 5055`.
+
+Days 29–32 add structured observations, the searchable timeline, scoped caregiver insights, and private PDF/CSV reports. See [implementation and operating notes](docs/day-29-32.md) and [actual verification results](docs/day-29-32-verification.md). Reports use real stored events and disclose unknown historical times and unavailable scheduled completion rates.

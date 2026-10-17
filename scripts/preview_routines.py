@@ -41,6 +41,7 @@ from services import (
     communication as communication,
     communication_preferences as personalization,
     care_coordination as coordination,
+    journal,
 )
 
 
@@ -251,6 +252,48 @@ def main():
                             timezone="America/Chicago",
                             priority="normal",
                             creation_key=uuid.uuid4().hex,
+                        )
+                    )
+                    completed_routine, _ = builder.save(
+                        dict(
+                            name="Fictional independent morning",
+                            description="Fictional completion for the report demonstration.",
+                            category="Morning",
+                            icon="sun",
+                            color="sage",
+                            profile_id=chosen or "",
+                            steps=[
+                                dict(
+                                    id="",
+                                    title="Choose the morning picture",
+                                    description="",
+                                    icon="book",
+                                )
+                            ],
+                        )
+                    )
+                    completed_run = runs.start(completed_routine, uuid.uuid4().hex)
+                    runs.mutate(
+                        completed_run,
+                        "complete",
+                        1,
+                        uuid.uuid4().hex,
+                        runs.steps_for(completed_run)[0].id,
+                    )
+                    observed = scheduling.utcnow().astimezone(
+                        scheduling.zone("America/Chicago")
+                    )
+                    journal.save(
+                        dict(
+                            activity="Completed Morning Routine Independently",
+                            date=observed.date().isoformat(),
+                            time=observed.strftime("%H:%M"),
+                            timezone="America/Chicago",
+                            notes="Fictional demonstration only: Fern chose a picture and completed the familiar morning routine. This is descriptive documentation, not a clinical assessment.",
+                            category="Achievements",
+                            tags="morning, independent",
+                            session_id=completed_run,
+                            task_id=task_id,
                         )
                     )
                     coordination.create_handoff(

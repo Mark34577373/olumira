@@ -1,108 +1,18 @@
-{% extends "base.html" %}
-{% from "components/ui.html" import alert, input_field, button %}
-
-{% block title %}Observations | Olumira{% endblock %}
-
-{% block content %}
-
-<div class="observation-page-header">
-	<div>
-		<p class="eyebrow">OBSERVATIONS</p>
-		<h1>Add an observation</h1>
-		<p>Capture a moment from today.</p>
-	</div>
-</div>
-
-{% if can('observations.create') %}<section class="observation-form-panel" aria-labelledby="observation-form-title">
-	{% if observation_saved %}
-	{{ alert('Observation saved. Your moment is safely recorded.') }}
-	{% endif %}
-
-    {% if observation_error %}{{ alert(observation_error, 'error') }}{% endif %}
-	<div class="observation-form-heading">
-		<div class="observation-form-mark" aria-hidden="true">✎</div>
-		<div>
-			<p class="card-label">NEW ENTRY</p>
-			<h2 id="observation-form-title">Observation details</h2>
-		</div>
-	</div>
-
-	<form class="observation-form" method="post" action="{{ url_for('observations.observations') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-		<div class="observation-form-grid">
-            <div class="observation-field-wide">{{ input_field('observation-activity', 'Activity', 'activity', form_values['activity'], required=true, placeholder='e.g., Outdoor play') }}</div>
-
-			<div class="observation-field">
-				<label for="observation-date">Date</label>
-				<input id="observation-date" name="date" type="date" value="{{ form_values['date'] }}" required>
-			</div>
-
-			<div class="observation-field">
-				<label for="observation-mood">Mood</label>
-				<select id="observation-mood" name="mood">
-					<option value="" {% if not form_values['mood'] %}selected{% endif %}>Choose a mood</option>
-					<option {% if form_values['mood'] == 'Happy' %}selected{% endif %}>Happy</option>
-					<option {% if form_values['mood'] == 'Calm' %}selected{% endif %}>Calm</option>
-					<option {% if form_values['mood'] == 'Excited' %}selected{% endif %}>Excited</option>
-					<option {% if form_values['mood'] == 'Frustrated' %}selected{% endif %}>Frustrated</option>
-					<option {% if form_values['mood'] == 'Sad' %}selected{% endif %}>Sad</option>
-					<option {% if form_values['mood'] == 'Tired' %}selected{% endif %}>Tired</option>
-					<option {% if form_values['mood'] == 'Other' %}selected{% endif %}>Other</option>
-				</select>
-			</div>
-
-			<div class="observation-field observation-field-wide">
-				<label for="observation-notes">Notes</label>
-				<textarea id="observation-notes" name="notes" maxlength="2000" rows="5" placeholder="What happened?" required>{{ form_values['notes'] }}</textarea>
-			</div>
-
-			<div class="observation-field observation-field-wide">
-				<label for="observation-tags">Tags <span class="field-optional">Optional</span></label>
-				<input id="observation-tags" name="tags" maxlength="120" type="text" value="{{ form_values['tags'] }}" placeholder="Outside, Exploration">
-			</div>
-		</div>
-
-		<div class="observation-form-actions">
-            {{ button('Save observation', 'observation-save-button') }}
-		</div>
-	</form>
-</section>
-
-{% endif %}<section class="saved-observations" aria-labelledby="saved-observations-title">
-	<div class="saved-observations-header">
-		<div>
-			<p class="eyebrow">JOURNAL</p>
-			<h2 id="saved-observations-title">Recent Observations</h2>
-		</div>
-		<span class="observation-count">{{ observations|length }}</span>
-	</div>
-
-	{% if observations %}
-	<div class="saved-observations-grid">
-		{% for observation in observations %}
-		<article class="saved-observation-card">
-			<div class="saved-observation-topline">
-				<time datetime="{{ observation['date'] }}">{{ observation['date'] }}</time>
-				{% if observation['mood'] %}<span class="saved-observation-mood">{{ observation['mood'] }}</span>{% endif %}
-			</div>
-			<h3>{{ observation['activity'] }}</h3>
-			{% if observation['notes'] %}<p class="saved-observation-notes">{{ observation['notes'] }}</p>{% endif %}
-			{% if observation['tags'] %}
-			<div class="saved-observation-tags" aria-label="Tags">
-				{% for tag in observation['tags'].split(',') %}
-				{% set clean_tag = tag.strip() %}
-				{% if clean_tag %}<span>{{ clean_tag }}</span>{% endif %}
-				{% endfor %}
-			</div>
-			{% endif %}
-            {% if can('observations.edit') %}<details class="routine-edit"><summary>Edit observation</summary><form method="post" action="{{ url_for('observations.edit_observation_route',observation_id=observation.id) }}" class="workspace-form"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% for key,label,limit in [('activity','Activity',120),('date','Date',10),('notes','Notes',2000),('mood','Mood',20),('tags','Tags',120)] %}<label for="observation-{{ observation.id }}-{{ key }}">{{ label }}</label><input id="observation-{{ observation.id }}-{{ key }}" type="{{ 'date' if key=='date' else 'text' }}" name="{{ key }}" maxlength="{{ limit }}" value="{{ observation[key] or '' }}" {% if key in ['activity','date'] %}required{% endif %}>{% endfor %}<button class="routine-button">Save changes</button></form></details>{% endif %}
-
-		</article>
-		{% endfor %}
-	</div>
-	{% else %}
-	<p class="saved-observations-empty">No saved observations yet.</p>
-	{% endif %}
-</section>
-
-{% endblock %}
+{% extends 'base.html' %}{% block title %}Observations | Olumira{% endblock %}{% block content %}
+{% include 'observations/nav.html' %}
+<div class="observation-page-header"><div><p class="eyebrow">CAREGIVER JOURNAL</p><h1>{{ 'Observation timeline' if request.endpoint=='observations.timeline' else 'Observations' }}</h1><p>Everyday moments, in your family's words.</p></div></div>
+{% if observation_saved %}<p class="ui-alert" role="status">Observation saved. Your moment is safely recorded.</p>{% endif %}
+{% if observation_error %}<p class="ui-alert" role="alert">{{ observation_error }}</p>{% endif %}
+{% if can('observations.create') and request.endpoint!='observations.timeline' %}<details class="journal-panel" {% if observation_error %}open{% endif %}><summary>Add an observation</summary><h2>Add an observation</h2><form class="workspace-form" method="post" action="{{ url_for('observations.observations') }}">{% include 'observations/form.html' %}</form></details>{% endif %}
+<section class="journal-panel" aria-labelledby="journal-filter-heading"><h2 id="journal-filter-heading">{{ 'Timeline filters' if request.endpoint=='observations.timeline' else 'Recent Observations' }}</h2>
+<form method="get" class="journal-form-grid">
+{% for key,label in [('q','Search title, description, category or tags'),('tag','Exact tag')] %}<label for="filter-{{ key }}">{{ label }}<input id="filter-{{ key }}" name="{{ key }}" value="{{ filters[key] }}" maxlength="120"></label>{% endfor %}
+<label for="filter-category">Category<select id="filter-category" name="category"><option value="">All categories</option>{% for category in categories %}<option {% if filters.category==category %}selected{% endif %}>{{ category }}</option>{% endfor %}</select></label>
+<label for="filter-author">Author<select id="filter-author" name="author"><option value="">All authors</option>{% for id,name in authors %}<option value="{{ id }}" {% if filters.author==id %}selected{% endif %}>{{ name }}</option>{% endfor %}</select></label>
+<label for="filter-period">Date range<select name="period" id="filter-period">{% for value,label in [('','Any time'),('today','Today'),('7','Last 7 days'),('30','Last 30 days'),('custom','Custom range')] %}<option value="{{ value }}" {% if filters.period==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+{% for key,label in [('from','From date'),('to','Through date')] %}<label for="filter-{{ key }}">{{ label }}<input id="filter-{{ key }}" type="date" name="{{ key }}" value="{{ filters[key] }}"></label>{% endfor %}
+<label for="filter-timezone">Timezone<input id="filter-timezone" name="timezone" value="{{ filters.timezone or config.APP_TIMEZONE }}" maxlength="64"></label>
+<label for="filter-status">Visibility<select id="filter-status" name="status">{% for value in ['active','archived','all'] %}<option {% if filters.status==value %}selected{% endif %}>{{ value }}</option>{% endfor %}</select></label>
+<div class="journal-actions"><button class="routine-button">Apply filters</button><a class="text-link" href="{{ url_for(request.endpoint) }}">Clear filters</a></div></form><p class="auth-hint">Dates are inclusive in the selected timezone. Older date-only entries retain their original date and an unknown clock time.</p></section>
+<section aria-label="Observation results"><p role="status">{{ total }} matching {{ 'entry' if total==1 else 'entries' }} · Page {{ page }}</p><ol class="journal-timeline">{% for observation in observations %}<li class="journal-panel"><article><p class="eyebrow">{{ observation.category }}{% if observation.archived_at %} · Archived{% endif %}</p><h2><a href="{{ journal_link('observations.detail',observation.id) }}">{{ observation.activity }}</a></h2><p>{{ journal_stamp(observation.observed_at,filters.timezone or config.APP_TIMEZONE) if observation.observed_at else observation.date ~ ' · Time unknown' }} · {{ author_names.get(observation.author_id,'Unknown author (legacy record)') }}</p><p class="journal-text">{{ (observation.notes or '')[:240] }}{{ '…' if observation.notes and observation.notes|length>240 else '' }}</p><p>Tags: {{ observation.tags or 'None' }}</p>{% if observation.session_id %}<p>Linked guided routine</p>{% endif %}<a class="text-link" href="{{ journal_link('observations.detail',observation.id) }}">View details</a></article></li>{% else %}<li class="journal-panel">{{ 'No matching observations. Clear filters to see more entries.' if total==0 and (filters.q or filters.category or filters.tag or filters.period or filters.status!='active') else 'No saved observations yet.' }}</li>{% endfor %}</ol>
+<nav class="journal-actions" aria-label="Observation pages">{% if page>1 %}<a class="text-link" href="{{ journal_link(request.endpoint,page=page-1) }}">Previous page</a>{% endif %}{% if page*20<total %}<a class="text-link" href="{{ journal_link(request.endpoint,page=page+1) }}">Next page</a>{% endif %}</nav></section>{% endblock %}

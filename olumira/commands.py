@@ -56,7 +56,7 @@ def register_commands(app):
                         raise ValueError('Unexpected column type')
                     if not expected.primary_key and column['nullable'] != expected.nullable:
                         raise ValueError('Unexpected nullability')
-                expected_indexes = {(index.name, tuple(c.name for c in index.columns)) for index in table.indexes if tuple(c.name for c in index.columns) != ('workspace_id',)}
+                expected_indexes = {(index.name, tuple(c.name for c in index.columns)) for index in table.indexes if all(c.name in LEGACY_COLUMNS[table.name] for c in index.columns)}
                 actual_indexes = {(index['name'], tuple(index['column_names'])) for index in inspector.get_indexes(table.name)}
                 if expected_indexes != actual_indexes:
                     raise ValueError('Unexpected indexes')

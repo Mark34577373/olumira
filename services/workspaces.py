@@ -23,6 +23,7 @@ READ = frozenset(
         "observations.view",
         "communication.view",
         "care.view",
+        "analytics.view",
     }
 )
 WRITE = frozenset(
@@ -36,6 +37,7 @@ WRITE = frozenset(
         "observations.edit",
         "communication.manage",
         "care.manage",
+        "reports.generate",
         "care.acknowledge",
     }
 )

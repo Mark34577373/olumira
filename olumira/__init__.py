@@ -16,6 +16,8 @@ def create_app(config=None):
     root = Path(__file__).resolve().parent.parent
     app = OlumiraFlask(__name__, template_folder=str(root / 'templates'), static_folder=str(root / 'static'))
     app.config.update(configuration(config))
+    from .privacy_logging import configure_access_logging
+    configure_access_logging()
 
     from .extensions import db, migrate, login_manager, limiter, csrf
     from . import models
@@ -108,6 +110,8 @@ def create_app(config=None):
                 'routines.edit_routine_route': 'routines.edit',
                 'routines.delete_routine_route': 'routines.edit',
                 'observations.observations': 'observations.create',
+                'observations.archive': 'observations.edit',
+                'observations.reports': 'reports.generate',
                 'observations.edit_observation_route': 'observations.edit',
             }.get(request.endpoint)
             if permission:
@@ -121,7 +125,7 @@ def create_app(config=None):
     @app.after_request
     def security_headers(response):
         if request.endpoint != 'static':
-            response.headers['Cache-Control'] = 'no-store'
+            response.headers['Cache-Control'] = 'private, no-store, max-age=0' if request.endpoint=='observations.reports' else 'no-store'
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
