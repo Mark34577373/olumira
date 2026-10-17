@@ -58,9 +58,9 @@ class InterfaceTests(unittest.TestCase):
     def test_routine_management(self):
         post(self.client, '/routines/add', data={'name': 'Test walk', 'category': 'Afternoon'})
         routine = self.routines()[-1]
-        post(self.client, f'/routines/{routine["id"]}/edit', data={'name': 'Short walk', 'category': 'Afternoon'})
+        post(self.client, f'/routines/{routine["id"]}/edit', data={'name': 'Short walk', 'category': 'Afternoon', 'version': '1'})
         self.assertIn('Short walk', self.client.get('/routines').get_data(as_text=True))
-        post(self.client, f'/routines/{routine["id"]}/delete')
+        post(self.client, f'/routines/{routine["id"]}/delete',data={'version':'2'})
         self.assertNotIn('Short walk', self.client.get('/routines').get_data(as_text=True))
         post(self.client, '/routines/add-template', data={'template': 'Bedtime'})
         self.assertIn('Lights out', self.client.get('/routines').get_data(as_text=True))

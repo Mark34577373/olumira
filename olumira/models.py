@@ -1,4 +1,4 @@
-"""Models mirror the legacy schema, including nullable legacy ownership."""
+"""Account, workspace and routine models preserve nullable legacy ownership."""
 from .extensions import db
 
 
@@ -17,6 +17,16 @@ class Routine(db.Model):
     owner_id = db.Column(db.Text, nullable=True)
     name = db.Column(db.Text, nullable=False)
     category = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False, default='', server_default='')
+    icon = db.Column(db.String(24), nullable=False, default='sun', server_default='sun')
+    color = db.Column(db.String(16), nullable=False, default='sage', server_default='sage')
+    archived_at = db.Column(db.DateTime(timezone=True))
+    version = db.Column(db.Integer, nullable=False, default=1, server_default='1')
+    is_checklist = db.Column(db.Boolean, nullable=False, default=True, server_default=db.true())
+    created_by = db.Column(db.String(32), db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime(timezone=True), default=lambda: utcnow())
+    updated_at = db.Column(db.DateTime(timezone=True), default=lambda: utcnow(), onupdate=lambda: utcnow())
+
 
 
 class Observation(db.Model):
@@ -168,3 +178,180 @@ class AuditEvent(db.Model):
     event_type = db.Column(db.String(48), nullable=False)
     target_id = db.Column(db.String(64))
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class RoutineStep(db.Model):
+    __tablename__ = 'routine_steps'
+    __table_args__ = (db.UniqueConstraint('routine_id','position',name='uq_routine_step_position'),
+                     db.CheckConstraint('position >= 0',name='ck_routine_step_position'))
+    id = db.Column(db.String(32), primary_key=True)
+    routine_id = db.Column(db.Integer, db.ForeignKey('routines.id',ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(500), nullable=False, default='')
+    icon = db.Column(db.String(24), nullable=False, default='sun')
+    position = db.Column(db.Integer, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class RoutineCompletionSnapshot(db.Model):
+    __tablename__ = 'routine_completion_snapshots'
+    __table_args__ = (db.ForeignKeyConstraint(['routine_id','completion_date'],
+        ['routine_completions.routine_id','routine_completions.completion_date'],ondelete='CASCADE'),)
+    routine_id = db.Column(db.Integer, primary_key=True)
+    completion_date = db.Column(db.Text, primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'))
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'))
+    name = db.Column(db.Text, nullable=False)
+    category = db.Column(db.Text, nullable=False)
+    source = db.Column(db.String(16), nullable=False)
+    captured_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class RoutineSchedule(db.Model):
+    __tablename__ = "routine_schedules"
+    __table_args__ = (
+        db.CheckConstraint(
+            "state IN ('active','paused','ended')", name="ck_schedule_state"
+        ),
+    )
+    id = db.Column(db.String(32), primary_key=True)
+    routine_id = db.Column(
+        db.Integer, db.ForeignKey("routines.id"), nullable=False, index=True
+    )
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), nullable=False, index=True
+    )
+    profile_id = db.Column(db.String(32), db.ForeignKey("care_profiles.id"))
+    state = db.Column(db.String(12), nullable=False, default="active")
+    version = db.Column(db.Integer, nullable=False, default=1)
+    revision = db.Column(db.Integer, nullable=False, default=1)
+    created_by = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(
+        db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow
+    )
+
+
+class RoutineScheduleRevision(db.Model):
+    __tablename__ = "routine_schedule_revisions"
+    __table_args__ = (
+        db.UniqueConstraint("schedule_id", "number", name="uq_schedule_revision"),
+        db.CheckConstraint(
+            "frequency IN ('once','daily','weekdays','weekly')",
+            name="ck_schedule_frequency",
+        ),
+    )
+    id = db.Column(db.String(32), primary_key=True)
+    schedule_id = db.Column(
+        db.String(32), db.ForeignKey("routine_schedules.id"), nullable=False, index=True
+    )
+    number = db.Column(db.Integer, nullable=False)
+    timezone = db.Column(db.String(64), nullable=False)
+    local_time = db.Column(db.String(5), nullable=False)
+    frequency = db.Column(db.String(12), nullable=False)
+    weekdays = db.Column(db.String(13), nullable=False)
+    start_date = db.Column(db.String(10), nullable=False)
+    end_date = db.Column(db.String(10))
+    valid_from = db.Column(db.DateTime(timezone=True), nullable=False)
+    valid_until = db.Column(db.DateTime(timezone=True))
+
+
+class RoutineOccurrence(db.Model):
+    __tablename__ = "routine_occurrences"
+    __table_args__ = (
+        db.UniqueConstraint("revision_id", "local_date", name="uq_occurrence_day"),
+    )
+    id = db.Column(db.String(64), primary_key=True)
+    revision_id = db.Column(
+        db.String(32), db.ForeignKey("routine_schedule_revisions.id"), nullable=False
+    )
+    routine_id = db.Column(db.Integer, db.ForeignKey("routines.id"), nullable=False)
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), nullable=False, index=True
+    )
+    profile_id = db.Column(db.String(32), db.ForeignKey("care_profiles.id"))
+    scheduled_at = db.Column(db.DateTime(timezone=True), nullable=False, index=True)
+    local_date = db.Column(db.String(10), nullable=False)
+    local_time = db.Column(db.String(5), nullable=False)
+    timezone = db.Column(db.String(64), nullable=False)
+
+
+class RoutineSession(db.Model):
+    __tablename__ = "routine_sessions"
+    __table_args__ = (
+        db.CheckConstraint(
+            "status IN ('active','paused','completed')", name="ck_session_status"
+        ),
+        db.Index(
+            "ix_sessions_scope_started", "workspace_id", "profile_id", "started_at"
+        ),
+    )
+    id = db.Column(db.String(32), primary_key=True)
+    routine_id = db.Column(
+        db.Integer, db.ForeignKey("routines.id"), nullable=False, index=True
+    )
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), nullable=False
+    )
+    profile_id = db.Column(db.String(32), db.ForeignKey("care_profiles.id"))
+    occurrence_id = db.Column(
+        db.String(64), db.ForeignKey("routine_occurrences.id"), unique=True
+    )
+    # Only ad-hoc runs use this slot; NULL permits multiple finished runs.
+    active_key = db.Column(db.String(64), unique=True)
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    icon = db.Column(db.String(24), nullable=False)
+    color = db.Column(db.String(16), nullable=False)
+    profile_name = db.Column(db.String(80), nullable=False)
+    routine_version = db.Column(db.Integer, nullable=False)
+    status = db.Column(db.String(12), nullable=False, default="active")
+    version = db.Column(db.Integer, nullable=False, default=1)
+    started_by = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
+    started_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    paused_at = db.Column(db.DateTime(timezone=True))
+    completed_at = db.Column(db.DateTime(timezone=True))
+
+
+class RoutineSessionStep(db.Model):
+    __tablename__ = "routine_session_steps"
+    __table_args__ = (
+        db.UniqueConstraint("session_id", "position", name="uq_session_step_position"),
+        db.CheckConstraint("position >= 0", name="ck_session_step_position"),
+    )
+    id = db.Column(db.String(32), primary_key=True)
+    session_id = db.Column(
+        db.String(32), db.ForeignKey("routine_sessions.id"), nullable=False, index=True
+    )
+    title = db.Column(db.Text, nullable=False)
+    description = db.Column(db.String(500), nullable=False)
+    icon = db.Column(db.String(24), nullable=False)
+    position = db.Column(db.Integer, nullable=False)
+    completed_by = db.Column(db.String(32), db.ForeignKey("users.id"))
+    completed_at = db.Column(db.DateTime(timezone=True))
+
+
+class RoutineSessionEvent(db.Model):
+    __tablename__ = "routine_session_events"
+    id = db.Column(db.String(32), primary_key=True)
+    session_id = db.Column(
+        db.String(32), db.ForeignKey("routine_sessions.id"), nullable=False, index=True
+    )
+    step_id = db.Column(db.String(32), db.ForeignKey("routine_session_steps.id"))
+    actor_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
+    action = db.Column(db.String(24), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class RoutineLaunchRequest(db.Model):
+    __tablename__ = "routine_launch_requests"
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(
+        db.String(32), db.ForeignKey("family_workspaces.id"), nullable=False
+    )
+    actor_id = db.Column(db.String(32), db.ForeignKey("users.id"), nullable=False)
+    routine_id = db.Column(db.Integer, db.ForeignKey("routines.id"), nullable=False)
+    session_id = db.Column(
+        db.String(32), db.ForeignKey("routine_sessions.id"), nullable=False
+    )

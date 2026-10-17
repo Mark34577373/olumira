@@ -1,98 +1,15 @@
-{% extends "base.html" %}
-{% from "components/ui.html" import icon, progress_bar, page_heading, alert %}
-
-{% block title %}Routines | Olumira{% endblock %}
-
-{% block content %}
-
-{{ page_heading("Today's routines", completed_routines|string ~ ' of ' ~ routine_count|string ~ ' completed today. Progress starts fresh each day.', 'ROUTINES') }}
-{{ progress_bar(progress, 'Today’s routine completion', 'routines-page-progress') }}
-
-{% if error == "limit" %}
-<p class="routine-form-error" role="alert">You've reached the routine limit. Delete one before adding another.</p>
-{% elif error %}
-<p class="routine-form-error" role="alert">Please enter a routine name (up to 80 characters).</p>
-{% endif %}
-
-<datalist id="category-options">
-	{% for option in category_options %}<option value="{{ option }}"></option>{% endfor %}
-</datalist>
-
-{% for category, items in routine_groups.items() %}
-<section class="routine-group" aria-labelledby="routine-group-{{ loop.index }}">
-	<h2 class="routine-group-title" id="routine-group-{{ loop.index }}">{{ category }}</h2>
-	<div class="routine-card">
-		{% for routine in items %}
-		<div class="routine-entry">
-			<div class="routine-row">
-				<form class="task-form routine-task-form" method="post" action="{{ url_for('routines.toggle_routine_completion', routine_id=routine['id']) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<input type="hidden" name="return_to" value="routines">
-					<button {% if not can('routines.complete') %}disabled{% endif %} type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
-						<span class="routine-check" aria-hidden="true">
-							{% if routine['completed'] %}✓{% endif %}
-						</span>
-						<span class="task-visual">{{ icon('sun' if category == 'Morning' else 'calendar') }}</span><span class="routine-name">{{ routine['name'] }}</span>
-					</button>
-				</form>
-
-				{% if can('routines.edit') %}<div class="routine-actions">
-					<form method="post" action="{{ url_for('routines.delete_routine_route', routine_id=routine['id']) }}" data-confirm="Delete this routine?">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-						<button type="submit" class="routine-delete" aria-label="Delete {{ routine['name'] }}">Delete</button>
-					</form>
-				</div>
-                {% endif %}
-			</div>
-
-            {% if can('routines.edit') %}<details class="routine-edit">
-				<summary>Edit <span class="visually-hidden">{{ routine['name'] }}</span></summary>
-				<form class="routine-edit-form" method="post" action="{{ url_for('routines.edit_routine_route', routine_id=routine['id']) }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-					<input class="routine-input" name="name" type="text" value="{{ routine['name'] }}" maxlength="80" required aria-label="Routine name">
-					<input class="routine-input" name="category" type="text" value="{{ routine['category'] }}" maxlength="40" list="category-options" aria-label="Category">
-					<button type="submit" class="routine-button">Save</button>
-				</form>
-			</details>{% endif %}
-		</div>
-		{% endfor %}
-	</div>
-</section>
-{% else %}
-<p class="routine-empty">No routines yet. Add one or choose a template below.</p>
-{% endfor %}
-
-{% if can('routines.create') %}<section class="routine-manage" aria-label="Manage routines">
-	<div class="routine-manage-panel">
-		<h2>Add a routine</h2>
-		<form method="post" action="{{ url_for('routines.add_routine_route') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<div class="routine-field">
-				<label for="routine-name">Name</label>
-				<input class="routine-input" id="routine-name" name="name" type="text" maxlength="80" required placeholder="e.g., Go for a walk">
-			</div>
-			<div class="routine-field">
-				<label for="routine-category">Category <span class="field-optional">Optional</span></label>
-				<input class="routine-input" id="routine-category" name="category" type="text" maxlength="40" list="category-options" placeholder="e.g., Afternoon">
-			</div>
-			<button type="submit" class="routine-button">Add routine</button>
-		</form>
-	</div>
-
-	<div class="routine-manage-panel">
-		<h2>Add a template</h2>
-		<form method="post" action="{{ url_for('routines.add_template_route') }}">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-			<div class="routine-field">
-				<label for="routine-template">Template</label>
-				<select class="routine-input" id="routine-template" name="template">
-					{% for name in template_names %}<option>{{ name }}</option>{% endfor %}
-				</select>
-			</div>
-			<button type="submit" class="routine-button">Add template</button>
-		</form>
-	</div>
-</section>
-
-{% endif %}
+{% extends 'base.html' %}{% from 'components/ui.html' import icon,progress_bar %}
+{% block title %}Routine library | Olumira{% endblock %}
+{% block content %}{% include 'routines/navigation.html' %}
+<header class="routine-library-heading"><div><p class="eyebrow">SMALL STEPS. A CALMER DAY.</p><h1>Your routine library</h1><p>Make everyday moments feel familiar, one thoughtful step at a time.</p></div>{% if can('routines.create') %}<a class="routine-button primary-create" href="{{ url_for('routines.new_routine') }}">＋ Create routine</a>{% endif %}</header>
+<section class="routine-library-context"><span class="routine-library-mark">{{ icon('leaf') }}</span><div><strong>{{ g.profile.display_name if g.profile else 'Workspace routines' }}</strong><p>{{ completed_routines }} of {{ routine_count }} daily checklist items completed today. Guided runs save their progress separately.</p></div>{{ progress_bar(progress,'Daily checklist completion') }}</section>
+{% if error %}<p class="ui-alert ui-alert-error" role="alert">{{ 'You have 40 active routines. Archive one before adding another.' if error=='limit' else 'We could not save that change. Check the name, category and latest version, then try again.' }}</p>{% endif %}
+<form method="get" class="routine-library-filters" aria-label="Filter routines"><div><label for="routine-search">Search routines</label><input id="routine-search" type="search" name="q" value="{{ search }}" maxlength="100" placeholder="Find a familiar routine…"></div><div><label for="library-category">Category</label><select id="library-category" name="category"><option value="">All categories</option>{% for category in category_options %}<option {% if category_filter==category %}selected{% endif %}>{{ category }}</option>{% endfor %}</select></div><div><label for="library-status">Show</label><select id="library-status" name="status">{% for value,label in [('active','Active routines'),('archived','Archived routines'),('all','All routines')] %}<option value="{{ value }}" {% if status_filter==value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></div><button class="routine-button">Apply filters</button><a class="text-link" href="{{ url_for('routines.routines') }}">Clear</a></form>
+<p class="library-result-count">{{ library_total }} routine{{ 's' if library_total!=1 else '' }}{% if search or category_filter %} matching your filters{% endif %}</p>
+<div class="routine-library-grid">{% for routine in cards %}<article class="routine-library-card tone-{{ routine.color }} routine-entry"><div class="routine-card-top"><span class="routine-visual">{{ icon(routine.icon) }}</span><span class="role-badge">{{ 'Archived' if routine.archived_at else routine.category }}</span></div><h2><a href="{{ url_for('routines.routine_sequence',routine_id=routine.id) }}">{{ routine.name }}</a></h2>{% if routine.description %}<p class="routine-card-description">{{ routine.description }}</p>{% endif %}<p class="routine-card-meta">{{ card_steps[routine.id]|length or 1 }} step{{ 's' if card_steps[routine.id]|length>1 else '' }} · {{ 'Daily checklist' if routine.is_checklist else 'Personalized sequence' }}</p>
+{% if routine.is_checklist and not routine.archived_at %}<form class="task-form routine-task-form" method="post" action="{{ url_for('routines.toggle_routine_completion',routine_id=routine.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="return_to" value="routines">{% set completed=namespace(value=false) %}{% for items in routine_groups.values() %}{% for item in items if item.id==routine.id %}{% set completed.value=item.completed %}{% endfor %}{% endfor %}<button type="submit" class="routine-item {% if completed.value %}completed{% endif %}" aria-pressed="{{ 'true' if completed.value else 'false' }}" aria-label="Mark {{ routine.name }} {{ 'incomplete' if completed.value else 'complete' }}" {% if not can('routines.complete') %}disabled{% endif %}><span class="routine-check" aria-hidden="true">{{ '✓' if completed.value else '' }}</span><span>{{ 'Completed today' if completed.value else 'Complete today' }}</span></button></form>{% endif %}
+<div class="routine-card-footer"><a class="text-link" href="{{ url_for('routines.routine_sequence',routine_id=routine.id) }}">View sequence →</a>{% if can('routines.edit') or can('routines.create') %}<details class="routine-card-options"><summary>Options<span class="visually-hidden"> for {{ routine.name }}</span></summary><div class="routine-options-content">{% if can('routines.edit') and not routine.archived_at %}<a class="text-link" href="{{ url_for('routines.edit_builder',routine_id=routine.id) }}">Edit routine</a>{% endif %}{% if can('routines.create') %}<form method="post" action="{{ url_for('routines.duplicate_routine',routine_id=routine.id) }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="duplicate-profile-{{ routine.id }}">Copy to</label><select id="duplicate-profile-{{ routine.id }}" name="profile_id"><option value="">Workspace routines</option>{% for profile in g.profiles %}<option value="{{ profile.id }}" {% if profile.id==g.profile_id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select><button class="routine-button">Duplicate</button></form>{% endif %}{% if can('routines.edit') %}<form method="post" action="{{ url_for('routines.restore_routine' if routine.archived_at else 'routines.archive_routine',routine_id=routine.id) }}" {% if not routine.archived_at %}data-confirm="Archive this routine? Its history will be kept."{% endif %}><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="version" value="{{ routine.version }}"><button class="routine-button">{{ 'Restore' if routine.archived_at else 'Archive' }}</button></form>{% endif %}</div></details>{% endif %}</div></article>{% else %}<div class="routine-library-empty"><span class="routine-visual">{{ icon('leaf') }}</span><h2>{{ 'No routines match just yet' if search or category_filter else 'A little structure starts here' }}</h2><p>{{ 'Try a different search or clear your filters.' if search or category_filter else 'Create a personal sequence, or begin with a starter template below.' }}</p></div>{% endfor %}</div>
+{% if page>1 or page*24<library_total %}<nav class="library-pagination" aria-label="Routine library pages">{% if page>1 %}<a class="text-link" href="{{ url_for('routines.routines',page=page-1,q=search,category=category_filter,status=status_filter) }}">← Previous</a>{% endif %}<span>Page {{ page }}</span>{% if page*24<library_total %}<a class="text-link" href="{{ url_for('routines.routines',page=page+1,q=search,category=category_filter,status=status_filter) }}">Next →</a>{% endif %}</nav>{% endif %}
+{% if can('routines.create') %}<section class="routine-starters"><p class="eyebrow">A GENTLE STARTING POINT</p><h2>Make it your own</h2><p>Optional ideas to adapt together. Nothing is saved until you choose Save.</p><div class="routine-template-grid">{% for key,template in starter_templates.items() %}<a class="routine-template-card tone-{{ template.color }}" href="{{ url_for('routines.new_routine',template=key) }}">{{ icon(template.icon) }}<strong>{{ template.name }}</strong><span>{{ template.titles|length }} editable steps →</span></a>{% endfor %}</div></section>
+<section class="routine-manage" aria-label="Simple daily checklists"><div class="routine-manage-panel"><h2>Just one daily task?</h2><p>Add a simple checklist item that can be completed from your dashboard.</p><form method="post" action="{{ url_for('routines.add_routine_route') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><div class="routine-field"><label for="routine-name">Name</label><input class="routine-input" id="routine-name" name="name" required maxlength="80"></div><div class="routine-field"><label for="routine-category">Category</label><input class="routine-input" id="routine-category" name="category" maxlength="40"></div><button class="routine-button">Add routine</button></form></div><div class="routine-manage-panel"><h2>Daily checklist templates</h2><p>Each item can be checked off separately. Your existing checklists stay available.</p><form method="post" action="{{ url_for('routines.add_template_route') }}"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label for="routine-template">Choose a daily checklist</label><select class="routine-input" id="routine-template" name="template">{% for name in template_names %}<option>{{ name }}</option>{% endfor %}</select><button class="routine-button">Add template</button></form></div></section>{% endif %}
 {% endblock %}

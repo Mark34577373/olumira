@@ -132,7 +132,7 @@ def main():
                     page.reload()
                     assert page.locator('.task').first.get_attribute('aria-pressed') == 'true'
                     page.goto(origin + '/routines')
-                    assert page.locator('.routine-item').first.get_attribute('aria-pressed') == 'true'
+                    assert page.get_by_role('button',name='Mark Wake up incomplete',exact=True).get_attribute('aria-pressed') == 'true'
                     page.goto(origin + '/observations')
                     page.locator('#observation-activity').fill('Fictional browser check')
                     page.locator('#observation-notes').fill('Test data in a temporary database only.')

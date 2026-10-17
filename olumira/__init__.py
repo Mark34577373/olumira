@@ -42,6 +42,14 @@ def create_app(config=None):
     from services.authentication import load_user
     login_manager.user_loader(load_user)
     limiter.init_app(app)
+    @app.before_request
+    def routine_builder_body_limit():
+        # Maximum valid 30-step UTF-8 forms can exceed the default 64 KiB after
+        # URL encoding. Increase only these bounded builder POSTs, before CSRF
+        # parses the body; account and other forms retain the stricter limit.
+        if request.method == 'POST' and request.endpoint in {'routines.new_routine', 'routines.edit_builder'}:
+            request.max_content_length = 256 * 1024
+
     csrf.init_app(app)
 
     from .routes import dashboard, routines, communication, observations, resources, auth, workspaces
@@ -75,6 +83,15 @@ def create_app(config=None):
             return redirect(url_for('workspaces.index'))
         if request.method == 'POST' and request.blueprint != 'workspaces':
             permission = {
+                'routines.routine_schedule': 'routines.edit',
+                'routines.schedule_action': 'routines.edit',
+                'routines.start_session': 'routines.complete',
+                'routines.session_action': 'routines.complete',
+                'routines.new_routine': 'routines.create',
+                'routines.edit_builder': 'routines.edit',
+                'routines.duplicate_routine': 'routines.create',
+                'routines.restore_routine': 'routines.edit',
+                'routines.archive_routine': 'routines.edit',
                 'routines.add_routine_route': 'routines.create',
                 'routines.add_template_route': 'routines.create',
                 'routines.toggle_routine_completion': 'routines.complete',
@@ -111,6 +128,8 @@ def create_app(config=None):
         403: ('This action needs permission', 'Your workspace role does not allow this action. Ask a workspace owner for help.'),
         404: ('This page has wandered off', 'We couldn’t find that page or item. You can return to your dashboard to continue.'),
         405: ('That action isn’t available here', 'Please use the page controls to complete this action.'),
+        409: ('This item has changed', 'Another caregiver may have updated this item. Reload the latest version before trying again.'),
+        413: ('This form is a little too large', 'Shorten the text or use fewer steps, then try again. Your saved routine has not changed.'),
         429: ('Let’s take a short pause', 'Too many attempts. Please wait a while before trying again.'),
         500: ('Something needs a little attention', 'We couldn’t complete your request. Please try again in a moment.'),
     }

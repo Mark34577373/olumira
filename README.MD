@@ -34,7 +34,7 @@ venv/bin/python -m flask --app app db upgrade
 venv/bin/python -m flask --app app run --port 5000
 ```
 
-Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0006`; register an account after migrating, verify its email, then sign in.
+Open http://127.0.0.1:5000. No schema creation, data purging, or migrations happen automatically on startup. The current migration head is `0009`; register an account after migrating, verify its email, then sign in.
 
 For an **existing pre-Day-13 SQLite database**, do not run the initial upgrade against its existing tables. Follow [baseline adoption](docs/database-migration.md) first. The original local database has not been stamped or migrated by this change; a verified recovery backup is in the ignored `database/backups/` directory.
 
@@ -155,3 +155,26 @@ Use `venv/bin/python -m pytest tests -q` for automated checks and
 `venv/bin/python tests/browser/check_workspaces.py` for a temporary fictional browser
 demo. Email verification and invitations use private `.eml` previews in development;
 actual inbox delivery requires SMTP configuration and the explicit outbox worker.
+
+## Day 22: visual routine builder
+
+The routine library now supports ordered steps, visual previews, keyboard/touch
+ordering, starter sequences, search, duplication and reversible archive/restore.
+Daily checklists remain separate from multi-step sequence previews. Scheduling and
+guided execution are the next review stages, not enabled placeholders.
+
+Day 22 introduced migration **0007**; the current head is **0009**. Back up and migrate before starting the new
+application version. See the [Day 22 report](docs/day-22-routine-builder.md) for
+history preservation, permissions, tests, deployment instructions and limitations.
+Run `venv/bin/python tests/browser/check_routine_builder.py` for the fictional demo.
+
+
+### Days 23–24: recurring schedules and guided routines
+
+Open **Routines → Schedule** for daily/seven-day views, or open a routine to add a
+one-time, daily, weekday or weekly schedule. IANA timezone handling is explicit.
+**Start or resume guided routine** saves shared step progress, pause/resume and
+caregiver attribution. **History & saved runs** retains frozen sequence snapshots.
+Run `flask --app app db upgrade` with the project environment before restarting.
+See [behavior, architecture, migrations, demo and deployment instructions](docs/day-23-24-routines.md)
+and [verification evidence](docs/day-23-24-verification.md).

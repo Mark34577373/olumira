@@ -116,3 +116,32 @@ refuses source/destination account, workspace, profile, membership, invitation o
 audit data. It does not transfer authenticated collaboration databases. Earlier
 0003 instructions in this document describe the historical account release; use
 this section and the linked runbook for the current application.
+
+## Routine builder upgrade: 0006 → 0007
+
+The current application head is **0007**. Back up all tables, quiesce writes and
+apply the reviewed additive migration before starting this release. Existing
+routine IDs, ownership/profile scope, names and completion dates are preserved;
+no routine parent-table rebuild or automatic deletion occurs. Existing items become
+one-step templates. Completion label/scope snapshots are marked as adoption-time
+captures; no historical step sessions or original creators are invented.
+
+Read the [Day 22 migration/report](day-22-routine-builder.md). Verify every original
+column/record and foreign keys against the backup. Destructive automatic downgrade
+is refused. Restore a reviewed backup with the matching code if recovery is needed.
+
+Legacy-only transfer now requires an empty 0007 destination and refuses rich routine
+metadata, steps and snapshots in addition to account/workspace data. Use a complete,
+reviewed database migration for the authenticated application; do not use that helper
+as an exporter of a modern collaboration database.
+
+
+## Days 23–24 additive scheduling and guided-session tables
+
+Current head is `0009`. Migration `0008` adds schedule revisions and materialized
+occurrence identities; `0009` adds frozen guided runs/steps, caregiver activity,
+and idempotent launch requests. Neither rewrites parent routines or legacy daily
+completion dates. Back up before upgrading, verify preserved rows and foreign keys,
+and restart with matching application code. The legacy-only transfer refuses these
+records rather than discarding them. Downgrade requires an explicitly reviewed
+backup restore. See [the Days 23–24 runbook](day-23-24-routines.md).

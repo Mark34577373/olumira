@@ -11,7 +11,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from werkzeug.security import generate_password_hash, check_password_hash
 from olumira.extensions import db
-from olumira.models import User, Owner, Routine, AuthSession
+from olumira.models import User, Owner, Routine, RoutineStep, AuthSession
 from services.database import STARTER_ROUTINES, today_string, transaction
 
 PASSWORD_METHOD = 'scrypt:131072:8:1'
@@ -57,8 +57,10 @@ def register_user(email: str, display_name: str, password: str):
             store.flush()
             from services.workspaces import create_workspace
             create_workspace(user_id, 'Our Family', workspace_id=owner_id)
-            store.add_all(Routine(owner_id=owner_id, workspace_id=owner_id, name=name, category=category)
-                          for name, category in STARTER_ROUTINES)
+            for name, category in STARTER_ROUTINES:
+                routine=Routine(owner_id=owner_id,workspace_id=owner_id,name=name,category=category)
+                store.add(routine);store.flush()
+                store.add(RoutineStep(id=uuid.uuid4().hex,routine_id=routine.id,title=name,description='',icon='sun',position=0))
             store.flush()
         return user
     except IntegrityError:

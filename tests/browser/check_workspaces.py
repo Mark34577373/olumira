@@ -185,11 +185,9 @@ def main():
                 helper.locator("#routine-name").fill("Fictional shared reading")
                 helper.get_by_role("button", name="Add routine", exact=True).click()
                 owner.goto(origin + "/routines")
-                assert (
-                    owner.locator(".routine-name")
-                    .filter(has_text="Fictional shared reading")
-                    .is_visible()
-                )
+                assert owner.get_by_role(
+                    "link", name="Fictional shared reading", exact=True
+                ).is_visible()
                 checks.append(
                     "new account accepts invitation and collaborates on shared profile routines"
                 )

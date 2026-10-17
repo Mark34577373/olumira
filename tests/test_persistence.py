@@ -47,7 +47,7 @@ class PersistenceTests(unittest.TestCase):
         add_observation('fictional-test-owner', 'Fictional walk', '2026-10-16', 'Test only', 'Calm', 'test')
         # Preserve a legacy unowned routine; never silently reassign it.
         with transaction() as session:
-            session.add(Routine(name='Legacy test', category='General', owner_id=None))
+            session.execute(text("INSERT INTO routines (name,category) VALUES ('Legacy test','General')"))
         return routine['id']
 
     def test_upgrade_repeatable_and_no_model_drift(self):
@@ -68,6 +68,12 @@ class PersistenceTests(unittest.TestCase):
                 session.add(RoutineCompletion(routine_id=routine_id, completion_date=__import__('services.database', fromlist=['today_string']).today_string()))
         self.assertEqual(db.session.scalar(select(db.func.count()).select_from(Observation)), 1)
         delete_routine('fictional-test-owner', routine_id)
+        self.assertEqual(db.session.scalar(select(db.func.count()).select_from(RoutineCompletion)), 1)
+        self.assertIsNotNone(db.session.get(Routine,routine_id).archived_at)
+        # Constraint behavior is still checked with an explicit disposable DB delete;
+        # public routine deletion now archives and preserves completion records.
+        with transaction() as session:
+            session.delete(session.get(Routine,routine_id))
         self.assertEqual(db.session.scalar(select(db.func.count()).select_from(RoutineCompletion)), 0)
         with self.assertRaises(IntegrityError):
             with transaction() as session:
