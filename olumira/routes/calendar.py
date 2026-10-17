@@ -49,6 +49,7 @@ def fields(row=None):
 def calendar():
     values = request.args.to_dict()
     from services.personal_settings import get
+
     pref = get()
     values.setdefault("view", pref.calendar_view)
     values["week_start"] = pref.week_start
@@ -101,6 +102,7 @@ def calendar():
         visibility=values.get("status", "active"),
         clock_format="%I:%M %p %Z" if pref.time_format == "12" else "%H:%M %Z",
         reminders=reminders,
+        today=service.datetime.now(service.scheduling.zone(period["timezone"])).date(),
     )
 
 

@@ -57,6 +57,7 @@ def main():
         app = create_app(
             {
                 "APP_ENV": "development",
+                "TEMPLATES_AUTO_RELOAD": True,
                 "DATABASE": str(Path(directory) / "preview.db"),
                 "DATABASE_URL": None,
                 "SECRET_KEY": secrets.token_urlsafe(48),

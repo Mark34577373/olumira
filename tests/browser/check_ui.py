@@ -88,7 +88,7 @@ def main():
                         if overflow:
                             failures.append(f'Horizontal overflow: {route} at {width}')
                         assert page.locator('h1').count() == 1
-                        assert page.locator('nav a[aria-current="page"]').count() == 1
+                        assert page.locator('#primary-links a[aria-current="page"]').count() == 1
                         if width == 1440 and not args.baseline:
                             contrast_failures = page.evaluate(r"""() => {
                                 const rgb = value => (value.match(/[\d.]+/g) || []).map(Number);
@@ -134,7 +134,7 @@ def main():
                     page.goto(origin + '/routines')
                     assert page.get_by_role('button',name='Mark Wake up incomplete',exact=True).get_attribute('aria-pressed') == 'true'
                     page.goto(origin + '/observations')
-                    page.locator('summary').filter(has_text='Add an observation').click()
+                    page.get_by_role('link', name='Add observation', exact=True).click()
                     page.locator('#observation-activity').fill('Fictional browser check')
                     page.locator('#observation-notes').fill('Test data in a temporary database only.')
                     page.locator('#observation-save-button').click()

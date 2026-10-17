@@ -1,7 +1,7 @@
 {# Small, semantic building blocks shared by the existing Jinja pages. #}
 {% macro icon(name, class_name='') -%}
 <svg class="ui-icon {{ class_name }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-{% if name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18M7 14h2m4 0h2m-8 3h2"/>
+{% if name == 'arrow' %}<path d="M4 12h16m-6-6 6 6-6 6"/>{% elif name == 'calendar' %}<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M7 3v4m10-4v4M3 10h18M7 14h2m4 0h2m-8 3h2"/>
 {% elif name == 'chat' %}<path d="M21 11a8 8 0 0 1-8 8H8l-5 3 1-6a8 8 0 1 1 17-5Z"/><path d="M8 11h.01M12 11h.01M16 11h.01"/>
 {% elif name == 'note' %}<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9Z"/><path d="M14 3v6h6M8 13h8m-8 4h5"/>
 {% elif name == 'book' %}<path d="M12 5C9 3 5 3 3 4v16c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1Zm0 0v16"/>
@@ -21,7 +21,7 @@
 {%- endmacro %}
 
 {% macro empty_state(message, endpoint='', action='') -%}
-<div class="ui-empty"><span class="empty-icon">{{ icon('leaf') }}</span><p>{{ message }}</p>{% if endpoint %}<a class="text-link" href="{{ url_for(endpoint) }}">{{ action }} →</a>{% endif %}</div>
+<div class="ui-empty"><span class="empty-icon" aria-hidden="true">{{ icon('leaf') }}</span><h3>A little space to begin</h3><p>{{ message }}</p>{% if endpoint %}<a class="text-link" href="{{ url_for(endpoint) }}">{{ action }} →</a>{% endif %}</div>
 {%- endmacro %}
 
 {% macro section_header(title, eyebrow='', detail='') -%}
@@ -42,4 +42,11 @@
 
 {% macro card(class_name='') -%}
 <section class="dashboard-card {{ class_name }}">{{ caller() }}</section>
+{%- endmacro %}
+
+{% macro filter_panel(label='Filters', active=false) -%}
+<details class="filter-disclosure" {% if active %}open{% endif %}><summary>{{ label }}{% if active %}<span class="filter-active">Filters applied</span>{% endif %}</summary><div class="filter-fields">{{ caller() }}</div></details>
+{%- endmacro %}
+{% macro guided_progress(value,total,label,caption) -%}
+<div class="guided-progress"><p>{{ caption }}</p><progress style="--progress-steps:{{ total }}" value="{{ value }}" max="{{ total }}" aria-label="{{ label }}" aria-valuetext="{{ caption }}">{{ value }} of {{ total }}</progress></div>
 {%- endmacro %}

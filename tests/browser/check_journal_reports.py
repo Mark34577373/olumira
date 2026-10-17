@@ -111,6 +111,7 @@ def main():
                 "Create a structured profile observation through real CSRF form"
             )
             page.get_by_role("link", name="Timeline", exact=True).click()
+            page.locator(".filter-disclosure summary").click()
             page.locator("#filter-category").select_option("Achievements")
             page.locator("#filter-tag").fill("independent")
             page.get_by_role("button", name="Apply filters", exact=True).click()

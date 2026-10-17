@@ -241,3 +241,17 @@ Run reminders approximately every minute and privacy maintenance daily. No in-pr
 Privacy exports are authenticated, reauthenticated, CSRF-protected JSON with single-use five-minute download grants. Personal exports exclude shared care records; workspace exports require an owner and include all profiles in that workspace. Exports are bounded to 10,000 rows/8 MiB and generated in memory. Account deletion anonymizes identifying account fields and revokes all sessions and memberships, while shared history remains. Sole owners must add another owner or close the workspace first. Workspace closure revokes all access/invitations and records an operator-review request; **it does not physically erase shared history or backups**. No automatic physical purge is claimed.
 
 See [implementation, retention, backup and deployment details](docs/day-37-39.md) and [verification evidence](docs/day-37-39-verification.md). Fictional interactive preview: `venv/bin/python scripts/preview_routines.py --port 5072`. Do not use fictional credentials for real accounts.
+
+## Day 40 — Premium UI/UX transformation
+
+Olumira now uses a shared Modern Care premium stylesheet, a redesigned dashboard composition, consistent surfaces/controls, responsive horizontal navigation and dropdowns, differentiated calendar events, refined journals/boards/settings, and native-form loading feedback. Existing business logic, authorization, communication preferences and data are preserved. No migration or new dependency is needed; schema head remains **0021**.
+
+See [the Day 40 transformation and verification report](docs/day-40.md). Run `venv/bin/python tests/browser/check_premium_transformation.py` for the six-width feature matrix. A separate fictional preview can be started with `venv/bin/python scripts/preview_routines.py --port 5081`; template reload is enabled for this loopback-only preview so UI iteration does not require resetting its temporary data. The normal application remains on port 5000.
+
+## Day 40.1 — Premium visual refinement
+
+Content-first dashboard, calendar and journals; compact filters and library cards; accessible resource controls; balanced care tasks; grouped settings with unsaved-change feedback; and refined onboarding/tour navigation. Existing data and security behavior are preserved, with no schema or dependency changes. See [the refinement and verification report](docs/day-40-1.md). A fictional verified-account preview can be started with `venv/bin/python scripts/preview_routines.py --port 5090`.
+
+## Day 40.2 — Final premium experience refinement
+
+Slimmer secure context switching, clear Preferences / Account & security navigation, consistent current sections, refined dashboard/calendar controls and purposeful sparse care layouts. No schema or dependency changes. See [the Day 40.2 report](docs/day-40-2.md). Run `venv/bin/python tests/browser/check_navigation_refinement.py` for real native context-switching checks and `venv/bin/python tests/browser/check_premium_transformation.py --day-40-2` for the six-width matrix. Fictional preview: `venv/bin/python scripts/preview_routines.py --port 5092`.

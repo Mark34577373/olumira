@@ -151,7 +151,8 @@ def dashboard_context(owner_id):
         routine_timezone=timezone,
         checklist_timezone=current_app.config["APP_TIMEZONE"],
     )
-    from services.onboarding import get as setup_state
+    from services.onboarding import get as setup_state, STEPS
 
     result["setup_state"] = setup_state()
+    result["setup_steps"] = STEPS
     return result

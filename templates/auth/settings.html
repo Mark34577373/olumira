@@ -3,9 +3,9 @@
 {% from 'components/ui.html' import page_heading, alert %}
 {% block title %}Account settings | Olumira{% endblock %}
 {% block content %}
-{{ page_heading('Your account', 'A few thoughtful settings to keep your account yours.', 'ACCOUNT SETTINGS') }}
+{{ page_heading('Account & security', 'Manage your details, verified email, password and signed-in sessions.', 'YOUR PERSONAL ACCOUNT') }}
 {% if error %}{{ alert(error, 'error') }}{% endif %}
-<div class="settings-grid">
+<div class="settings-grid account-security-grid">
 <section class="dashboard-card"><h2>About you</h2>
 <form method="post" class="auth-form">{{ profile.hidden_tag() }}<input type="hidden" name="action" value="profile">
 {{ auth_field(profile.display_name, 'nickname') }}<button class="routine-button" type="submit">Save display name</button></form></section>

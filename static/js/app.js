@@ -242,6 +242,7 @@ window.addEventListener('pageshow', (event) => {
 document.querySelectorAll('.account-menu').forEach((accountMenu) => {
     accountMenu.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
+            event.stopPropagation();
             accountMenu.open = false;
             accountMenu.querySelector('summary').focus();
         }
@@ -278,3 +279,85 @@ if (!accountLinkForm && document.querySelector('[data-invitation-guidance]')) {
 
 // Native navigation remains the fallback; saved-state guards own idempotency.
 document.querySelectorAll('.setup-step').forEach(form => form.addEventListener('submit', () => {form.setAttribute('aria-busy','true');const status=form.querySelector('#setup-save-status');if(status) status.textContent='Saving your setup step…';}));
+
+
+// Native forms retain their submitter values, CSRF, server validation and redirects.
+// Fetch-based editors keep their own request/error handling.
+const pendingNativeForms = new WeakSet();
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post') return;
+    // Native attachment downloads have no reliable page-level completion event.
+    // Let the browser report their progress instead of implying an ongoing save.
+    const actionPath = new URL(form.getAttribute('action') || window.location.href, window.location.href).pathname;
+    if (actionPath.endsWith('/download') || event.submitter?.value === 'download') return;
+    if (pendingNativeForms.has(form)) { event.preventDefault(); return; }
+    queueMicrotask(() => {
+        if (event.defaultPrevented) return;
+        pendingNativeForms.add(form);
+        form.setAttribute('aria-busy', 'true');
+        const status = document.querySelector('#operation-status');
+        if (status) { status.hidden = false; status.textContent = 'Working on your request…'; }
+        // Downloads keep this document open; restore controls for further actions.
+        const restore = () => {
+            pendingNativeForms.delete(form);
+            form.removeAttribute('aria-busy');
+            if (status) { status.hidden = true; status.textContent = ''; }
+        };
+        window.setTimeout(restore, 8000);
+        window.addEventListener('pageshow', restore, { once: true });
+    });
+});
+
+// Optional guidance can be hidden for this page without changing saved setup.
+document.querySelectorAll('[data-dismiss-setup]').forEach(button => {
+    button.hidden = false;
+    button.addEventListener('click', () => {
+        button.closest('.setup-compact').hidden = true;
+        document.querySelector('#dashboard-welcome')?.focus();
+    });
+});
+// Disclosure anchors retain their native summary fallback without JavaScript.
+const openLinkedDisclosure = () => {
+    if (window.location.hash !== '#observation-composer') return;
+    const composer = document.querySelector('#observation-composer');
+    if (composer) { composer.open = true; composer.querySelector('input:not([type=hidden]),textarea')?.focus(); }
+};
+window.addEventListener('hashchange', openLinkedDisclosure);
+openLinkedDisclosure();
+document.querySelectorAll('[data-open-disclosure]').forEach(link => link.addEventListener('click', event => {
+    if (window.location.hash === '#observation-composer' && new URL(link.href).pathname === window.location.pathname) {
+        event.preventDefault();
+        openLinkedDisclosure();
+    }
+}));
+document.querySelectorAll('.routine-card-options,.board-options').forEach(menu => {
+    menu.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); menu.open = false; menu.querySelector('summary').focus(); } });
+    document.addEventListener('click', event => { if (!menu.contains(event.target)) menu.open = false; });
+});
+document.querySelectorAll('[data-preference-form]').forEach(form => {
+    const status = form.querySelector('[data-preference-status]');
+    const values = () => JSON.stringify([...new FormData(form)].filter(([name]) => !['csrf_token','version'].includes(name)));
+    const initial = values();
+    const update = () => { if (status) status.textContent = values() === initial ? 'No unsaved changes.' : 'Unsaved changes'; };
+    form.addEventListener('input', update); form.addEventListener('change', update);
+    form.addEventListener('submit', event => queueMicrotask(() => { if (!event.defaultPrevented && status) status.textContent = 'Saving your preferences…'; }));
+});
+const inlineComposer = document.querySelector('#observation-composer');
+if (inlineComposer) {
+    document.body.classList.add('composer-enhanced');
+    const opener = document.querySelector('[data-open-disclosure="observation-composer"]');
+    const updateComposerControl = () => { opener?.setAttribute('aria-expanded', String(inlineComposer.open)); };
+    updateComposerControl();
+    inlineComposer.addEventListener('toggle', () => {
+        updateComposerControl();
+        if (!inlineComposer.open) opener?.focus();
+    });
+}
+
+// Keep the active preference section visible within the narrow-screen tab strip.
+const preferenceNavigation = document.querySelector('.settings-sections');
+if (preferenceNavigation && window.matchMedia('(max-width:700px)').matches) {
+    const current = preferenceNavigation.querySelector('[aria-current="page"]');
+    if (current) preferenceNavigation.scrollLeft = current.getBoundingClientRect().left - preferenceNavigation.getBoundingClientRect().left - 6;
+}

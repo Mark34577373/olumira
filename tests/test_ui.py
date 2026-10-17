@@ -39,7 +39,8 @@ class InterfaceTests(unittest.TestCase):
                 response = self.client.get(route)
                 self.assertEqual(response.status_code, 200)
                 html = response.get_data(as_text=True)
-                self.assertEqual(html.count('aria-current="page"'), 1)
+                primary = html.split('id="primary-links"', 1)[1].split('</div>', 1)[0]
+                self.assertEqual(primary.count('aria-current="page"'), 1)
                 self.assertIn('Skip to content', html)
                 self.assertIn('id="primary-links"', html)
 

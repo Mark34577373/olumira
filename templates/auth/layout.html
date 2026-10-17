@@ -8,7 +8,7 @@
         <img src="{{ url_for('static', filename='images/welcome-garden.svg') }}" alt="" width="390" height="200">
     </div>
     <div class="dashboard-card auth-card">
-        {% if config.MAIL_BACKEND == 'development' %}<p class="ui-alert mail-preview-notice" role="note">Email delivery is in local preview mode in this environment.</p>{% endif %}
+        {% if config.MAIL_BACKEND == 'development' and config.APP_ENV != 'production' %}<p class="auth-hint mail-preview-notice" role="note">Local preview · Email is available through the development inbox.</p>{% endif %}
         {% block auth_content %}{% endblock %}
     </div>
 </section>

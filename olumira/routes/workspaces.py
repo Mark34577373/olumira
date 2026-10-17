@@ -79,6 +79,7 @@ def select_workspace():
     require("workspace.view", workspace_id)
     session["workspace_id"] = workspace_id
     session.pop("profile_id", None)
+    flash("Workspace switched. Workspace-wide care is active.", "success")
     return redirect(url_for("dashboard.dashboard"))
 
 
@@ -142,6 +143,7 @@ def settings():
 
 def profile_values():
     from services.workspaces import profile_values as validate
+
     return validate(request.form)
 
 
@@ -151,7 +153,8 @@ def new_profile():
     if request.method == "POST":
         try:
             from services.workspaces import create_profile
-            profile=create_profile(request.form)
+
+            profile = create_profile(request.form)
             session["profile_id"] = profile.id
             flash("Care profile created.", "success")
             return redirect(
@@ -192,7 +195,19 @@ def select_profile():
     if profile_id:
         get_profile(profile_id)
     session["profile_id"] = profile_id or None
-    return redirect(url_for({"communication":"communication.open_personal_board","observations":"observations.timeline","calendar":"calendar.calendar"}.get(request.form.get("return_to"),"dashboard.dashboard")))
+    flash(
+        "Care profile switched." if profile_id else "Workspace-wide care is active.",
+        "success",
+    )
+    return redirect(
+        url_for(
+            {
+                "communication": "communication.open_personal_board",
+                "observations": "observations.timeline",
+                "calendar": "calendar.calendar",
+            }.get(request.form.get("return_to"), "dashboard.dashboard")
+        )
+    )
 
 
 @bp.get("/profiles/<profile_id>")

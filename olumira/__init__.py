@@ -70,6 +70,12 @@ def create_app(config=None):
 
     @app.before_request
     def authorize_workspace():
+        # Account security remains available without membership. Verified users
+        # still receive the same authorized navigation context as product pages.
+        if request.endpoint == 'auth.settings' and current_user.is_authenticated and current_user.email_verified:
+            from services.workspaces import resolve_context
+            resolve_context()
+            return
         if request.endpoint == 'workspaces.accept':
             return
         if request.blueprint not in protected_blueprints:
