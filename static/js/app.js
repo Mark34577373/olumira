@@ -1,8 +1,9 @@
 const routineScrollKey = "olumira.routineScrollY";
-const savedScrollY = sessionStorage.getItem(routineScrollKey);
+let savedScrollY = null;
+try { savedScrollY = sessionStorage.getItem(routineScrollKey); } catch { /* Storage may be disabled. */ }
 
 if (savedScrollY !== null) {
-	sessionStorage.removeItem(routineScrollKey);
+	try { sessionStorage.removeItem(routineScrollKey); } catch { /* Navigation still works. */ }
 	window.addEventListener("pageshow", () => {
 		window.requestAnimationFrame(() => window.scrollTo(0, Number(savedScrollY)));
 	}, { once: true });
@@ -10,7 +11,7 @@ if (savedScrollY !== null) {
 
 document.querySelectorAll(".task-form").forEach((form) => {
 	form.addEventListener("submit", () => {
-		sessionStorage.setItem(routineScrollKey, String(window.scrollY));
+		try { sessionStorage.setItem(routineScrollKey, String(window.scrollY)); } catch { /* Optional scroll restoration. */ }
 	});
 });
 
@@ -30,7 +31,7 @@ if (resourceFilterRoot) {
 		detailTitle.textContent = title;
 		detailCopy.textContent = copy;
 		detailPanel.hidden = false;
-		detailPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+		detailPanel.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
 	};
 
 	const hideDetail = () => {
@@ -40,7 +41,10 @@ if (resourceFilterRoot) {
 	buttons.forEach((button) => {
 		button.addEventListener("click", () => {
 			const selectedFilter = button.dataset.filter;
-			buttons.forEach((item) => item.classList.toggle("active", item === button));
+			buttons.forEach((item) => {
+                item.classList.toggle("active", item === button);
+                item.setAttribute("aria-pressed", String(item === button));
+            });
 			cards.forEach((card) => {
 				const matches = selectedFilter === "All" || card.dataset.category === selectedFilter;
 				card.classList.toggle("is-hidden", !matches);
@@ -187,4 +191,24 @@ if (communicationRoot) {
 		form.reset();
 		dialog.close();
 	});
+}
+
+// Keep all navigation available when JavaScript is disabled.
+const menuToggle = document.querySelector('.menu-toggle');
+if (menuToggle) {
+    const navigation = menuToggle.closest('nav');
+    menuToggle.hidden = false;
+    navigation.classList.add('menu-ready');
+    const closeMenu = () => {
+        navigation.classList.remove('menu-open');
+        menuToggle.setAttribute('aria-expanded', 'false');
+    };
+    menuToggle.addEventListener('click', () => {
+        const expanded = menuToggle.getAttribute('aria-expanded') !== 'true';
+        menuToggle.setAttribute('aria-expanded', String(expanded));
+        navigation.classList.toggle('menu-open', expanded);
+    });
+    navigation.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') { closeMenu(); menuToggle.focus(); }
+    });
 }

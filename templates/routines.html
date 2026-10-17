@@ -6,23 +6,88 @@
 
 <div class="page-header">
 	<p class="eyebrow">ROUTINES</p>
-	<h1>Morning Routine</h1>
-	<p>Follow the routine step by step.</p>
+	<h1>Today's routines</h1>
+	<p>{{ completed_routines }} of {{ routine_count }} completed today. Progress starts fresh each day.</p>
 </div>
 
-<div class="routine-card">
-	{% for routine in routines %}
-	<form class="task-form routine-task-form" method="post" action="{{ url_for('toggle_routine_route', routine_id=routine['id']) }}">
-		<button type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
-			<span class="routine-check" aria-hidden="true">
-				{% if routine['completed'] %}✓{% endif %}
-			</span>
-			<span class="routine-name">{{ routine['name'] }}</span>
-		</button>
-	</form>
-	{% else %}
-	<p class="routine-empty">No routines have been added yet.</p>
-	{% endfor %}
-</div>
+{% if error == "limit" %}
+<p class="routine-form-error" role="alert">You've reached the routine limit. Delete one before adding another.</p>
+{% elif error %}
+<p class="routine-form-error" role="alert">Please enter a routine name (up to 80 characters).</p>
+{% endif %}
+
+<datalist id="category-options">
+	{% for option in category_options %}<option value="{{ option }}"></option>{% endfor %}
+</datalist>
+
+{% for category, items in routine_groups.items() %}
+<section class="routine-group" aria-labelledby="routine-group-{{ loop.index }}">
+	<h2 class="routine-group-title" id="routine-group-{{ loop.index }}">{{ category }}</h2>
+	<div class="routine-card">
+		{% for routine in items %}
+		<div class="routine-entry">
+			<div class="routine-row">
+				<form class="task-form routine-task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
+					<input type="hidden" name="return_to" value="routines">
+					<button type="submit" class="routine-item {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
+						<span class="routine-check" aria-hidden="true">
+							{% if routine['completed'] %}✓{% endif %}
+						</span>
+						<span class="routine-name">{{ routine['name'] }}</span>
+					</button>
+				</form>
+
+				<div class="routine-actions">
+					<form method="post" action="{{ url_for('delete_routine_route', routine_id=routine['id']) }}" onsubmit="return confirm('Delete this routine?')">
+						<button type="submit" class="routine-delete" aria-label="Delete {{ routine['name'] }}">Delete</button>
+					</form>
+				</div>
+			</div>
+
+			<details class="routine-edit">
+				<summary>Edit <span class="visually-hidden">{{ routine['name'] }}</span></summary>
+				<form class="routine-edit-form" method="post" action="{{ url_for('edit_routine_route', routine_id=routine['id']) }}">
+					<input class="routine-input" name="name" type="text" value="{{ routine['name'] }}" maxlength="80" required aria-label="Routine name">
+					<input class="routine-input" name="category" type="text" value="{{ routine['category'] }}" maxlength="40" list="category-options" aria-label="Category">
+					<button type="submit" class="routine-button">Save</button>
+				</form>
+			</details>
+		</div>
+		{% endfor %}
+	</div>
+</section>
+{% else %}
+<p class="routine-empty">No routines yet. Add one or choose a template below.</p>
+{% endfor %}
+
+<section class="routine-manage" aria-label="Manage routines">
+	<div class="routine-manage-panel">
+		<h2>Add a routine</h2>
+		<form method="post" action="{{ url_for('add_routine_route') }}">
+			<div class="routine-field">
+				<label for="routine-name">Name</label>
+				<input class="routine-input" id="routine-name" name="name" type="text" maxlength="80" required placeholder="e.g., Go for a walk">
+			</div>
+			<div class="routine-field">
+				<label for="routine-category">Category <span class="field-optional">Optional</span></label>
+				<input class="routine-input" id="routine-category" name="category" type="text" maxlength="40" list="category-options" placeholder="e.g., Afternoon">
+			</div>
+			<button type="submit" class="routine-button">Add routine</button>
+		</form>
+	</div>
+
+	<div class="routine-manage-panel">
+		<h2>Add a template</h2>
+		<form method="post" action="{{ url_for('add_template_route') }}">
+			<div class="routine-field">
+				<label for="routine-template">Template</label>
+				<select class="routine-input" id="routine-template" name="template">
+					{% for name in template_names %}<option>{{ name }}</option>{% endfor %}
+				</select>
+			</div>
+			<button type="submit" class="routine-button">Add template</button>
+		</form>
+	</div>
+</section>
 
 {% endblock %}

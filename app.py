@@ -1,7 +1,30 @@
-from flask import Flask, abort, redirect, render_template, request, url_for
-from services.database import initialize_database, add_starter_routines
-from services.routines import get_routines, get_progress, toggle_routine
+import os
+import uuid
+from datetime import timedelta
+
+from flask import Flask, abort, g, redirect, render_template, request, session, url_for
+
+from services.database import (
+    initialize_database,
+    ensure_workspace,
+    purge_old_workspaces,
+    today_string,
+    time_greeting,
+)
+from services.routines import (
+    ROUTINE_TEMPLATES,
+    add_routine,
+    add_template,
+    delete_routine,
+    get_routines,
+    group_by_category,
+    summarize_progress,
+    toggle_routine,
+    update_routine,
+)
 from services.observations import add_observation, get_observations
+
+DEV_SECRET_KEY = "dev-only-secret-change-me"
 
 COMMUNICATION_OPTIONS = [
     {"id": "thirsty", "name": "Thirsty", "icon": "💧", "category": "Needs", "message": "I want water."},
@@ -115,31 +138,57 @@ RESOURCES = [
 
 app = Flask(__name__)
 
+app.secret_key = os.environ.get("SECRET_KEY", DEV_SECRET_KEY)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+    SESSION_COOKIE_SECURE=bool(os.environ.get("RENDER")),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=30),
+)
+
+if os.environ.get("RENDER") and app.secret_key == DEV_SECRET_KEY:
+    print("WARNING: SECRET_KEY is not set. Add it in Render's Environment settings.")
+
 initialize_database()
-add_starter_routines()
+purge_old_workspaces()
+
+
+@app.before_request
+def load_workspace():
+    # Every visitor gets a private workspace tied to a signed cookie.
+    if request.endpoint in (None, "static"):
+        return
+
+    owner_id = session.get("owner_id") or uuid.uuid4().hex
+    ensure_workspace(owner_id)
+    session["owner_id"] = owner_id
+    session.permanent = True
+    g.owner_id = owner_id
 
 
 @app.route("/")
 def dashboard():
-    routines = get_routines()
-    completed_routines = sum(routine["completed"] for routine in routines)
-    routine_count = len(routines)
-    progress = get_progress()
-    recent_observations = get_observations()[:2]
+    routine_list = get_routines(g.owner_id)
+    completed_routines, routine_count, progress = summarize_progress(routine_list)
+
+    saved_observations = get_observations(g.owner_id)
 
     return render_template(
         "dashboard.html",
-        routines=routines,
+        greeting=time_greeting(),
+        routine_groups=group_by_category(routine_list),
         completed_routines=completed_routines,
         routine_count=routine_count,
         progress=progress,
-        recent_observations=recent_observations,
+        recent_observations=saved_observations[:2],
+        observation_count=len(saved_observations),
+        active_routine_count=len(group_by_category(routine_list)),
     )
 
 
 @app.route("/routines/<int:routine_id>/toggle", methods=["POST"])
 def toggle_routine_completion(routine_id):
-    if not toggle_routine(routine_id):
+    if not toggle_routine(g.owner_id, routine_id):
         abort(404)
     endpoint = {
         "dashboard": "dashboard",
@@ -150,15 +199,53 @@ def toggle_routine_completion(routine_id):
 
 @app.route("/routines")
 def routines():
-    routines = get_routines()
-    return render_template("routines.html", routines=routines)
+    routine_list = get_routines(g.owner_id)
+    groups = group_by_category(routine_list)
+    completed_routines, routine_count, progress = summarize_progress(routine_list)
+
+    return render_template(
+        "routines.html",
+        routine_groups=groups,
+        category_options=sorted(set(groups) | set(ROUTINE_TEMPLATES)),
+        template_names=list(ROUTINE_TEMPLATES),
+        completed_routines=completed_routines,
+        routine_count=routine_count,
+        progress=progress,
+        error=request.args.get("error"),
+    )
 
 
-@app.route("/routines/toggle/<int:routine_id>", methods=["POST"])
-def toggle_routine_route(routine_id):
-    if not toggle_routine(routine_id):
+@app.route("/routines/add", methods=["POST"])
+def add_routine_route():
+    status = add_routine(
+        g.owner_id, request.form.get("name"), request.form.get("category")
+    )
+    return redirect(url_for("routines", error=None if status == "ok" else status))
+
+
+@app.route("/routines/<int:routine_id>/edit", methods=["POST"])
+def edit_routine_route(routine_id):
+    status = update_routine(
+        g.owner_id, routine_id, request.form.get("name"), request.form.get("category")
+    )
+    if status == "missing":
+        abort(404)
+    return redirect(url_for("routines", error=None if status == "ok" else status))
+
+
+@app.route("/routines/<int:routine_id>/delete", methods=["POST"])
+def delete_routine_route(routine_id):
+    if not delete_routine(g.owner_id, routine_id):
         abort(404)
     return redirect(url_for("routines"))
+
+
+@app.route("/routines/add-template", methods=["POST"])
+def add_template_route():
+    status = add_template(g.owner_id, request.form.get("template"))
+    if status == "invalid":
+        abort(400)
+    return redirect(url_for("routines", error=None if status == "ok" else status))
 
 
 @app.route("/communication")
@@ -172,27 +259,28 @@ def communication():
 
 @app.route("/observations", methods=["GET", "POST"])
 def observations():
-    form_values = {"activity": "", "date": "", "notes": "", "mood": "", "tags": ""}
+    form_values = {"activity": "", "date": today_string(), "notes": "", "mood": "", "tags": ""}
 
     if request.method == "POST":
-        form_values = {
+        submitted = {
             field: request.form.get(field, "").strip()
             for field in form_values
         }
-        add_observation(
-            form_values["activity"],
-            form_values["date"],
-            form_values["notes"],
-            form_values["mood"],
-            form_values["tags"],
+        saved = add_observation(
+            g.owner_id,
+            submitted["activity"],
+            submitted["date"],
+            submitted["notes"],
+            submitted["mood"],
+            submitted["tags"],
         )
-        return redirect(url_for("observations", saved="1"))
+        return redirect(url_for("observations", saved="1" if saved else None))
 
     return render_template(
         "observations.html",
         form_values=form_values,
         observation_saved=request.args.get("saved") == "1",
-        observations=get_observations(),
+        observations=get_observations(g.owner_id),
     )
 
 

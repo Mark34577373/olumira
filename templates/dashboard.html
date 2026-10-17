@@ -6,21 +6,18 @@
 
 <section class="welcome">
 	<div>
-		<p class="eyebrow">CAREGIVER DASHBOARD</p>
-		<h1>Good morning</h1>
-		<p class="subtitle">Here's what's happening today.</p>
+		<p class="eyebrow">A LITTLE STRUCTURE. A LITTLE MORE CALM.</p>
+		<h1>{{ greeting }}!</h1>
+		<p class="subtitle">Here's what's happening today. One small step at a time.</p>
 	</div>
+    <img class="welcome-art" src="{{ url_for('static', filename='images/welcome-garden.svg') }}" alt="" width="390" height="200">
 </section>
 
-<section class="progress-section">
-	<div class="section-header">
-		<div>
-			<h2>Today's Progress</h2>
-			<p>{{ completed_routines }} of {{ routine_count }} activities completed</p>
-		</div>
-		<div class="progress-number">{{ progress }}%</div>
-	</div>
-	<progress class="progress-bar" aria-label="Today's activities" value="{{ progress }}" max="100">{{ progress }}%</progress>
+<section class="stats-grid" aria-label="Your day at a glance">
+    <article class="stat-card"><h2>Today's progress</h2><div class="stat-value"><strong>{{ progress }}<small>%</small></strong><span class="stat-icon sage" aria-hidden="true">✓</span></div><progress class="progress-bar" aria-label="Today's routine progress" value="{{ progress }}" max="100">{{ progress }}%</progress></article>
+    <article class="stat-card"><h2>Tasks completed</h2><div class="stat-value"><strong>{{ completed_routines }}<small> / {{ routine_count }}</small></strong><span class="stat-icon peach" aria-hidden="true">☀</span></div><p>A little progress, every day</p></article>
+    <article class="stat-card"><h2>Saved observations</h2><div class="stat-value"><strong>{{ observation_count }}</strong><span class="stat-icon lavender" aria-hidden="true">▤</span></div><p>Moments you've recorded</p></article>
+    <article class="stat-card"><h2>Active routines</h2><div class="stat-value"><strong>{{ active_routine_count }}</strong><span class="stat-icon sage" aria-hidden="true">❧</span></div><p>Groups to guide your day</p></article>
 </section>
 
 <section class="dashboard-grid">
@@ -28,35 +25,41 @@
 		<div class="card-header">
 			<div>
 				<p class="card-label">TODAY</p>
-				<h2>Morning Routine</h2>
+				<h2>Today's Routines</h2>
 			</div>
-			<span class="card-icon" aria-hidden="true">✓</span>
-		</div>
+			<span class="completion-badge">{{ completed_routines }} of {{ routine_count }}</span>
+            </div>
+            <progress class="progress-bar routine-progress" aria-label="Activities completed today" value="{{ progress }}" max="100">{{ progress }}%</progress>
 
 		<div class="task-list">
-			{% if routines %}
-			{% for routine in routines %}
-			<form class="task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
-				<input type="hidden" name="return_to" value="dashboard">
-				<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
-					<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
-					<span>{{ routine['name'] }}</span>
-				</button>
-			</form>
+			{% if routine_groups %}
+			{% for category, items in routine_groups.items() %}
+			<div class="task-group">
+				<h3 class="task-group-title">{{ category }}</h3>
+				{% for routine in items %}
+				<form class="task-form" method="post" action="{{ url_for('toggle_routine_completion', routine_id=routine['id']) }}">
+					<input type="hidden" name="return_to" value="dashboard">
+					<button type="submit" class="task {% if routine['completed'] %}completed{% endif %}" aria-pressed="{{ 'true' if routine['completed'] else 'false' }}" aria-label="{% if routine['completed'] %}Mark {{ routine['name'] }} incomplete{% else %}Mark {{ routine['name'] }} complete{% endif %}">
+						<span class="task-check" aria-hidden="true">{% if routine['completed'] %}✓{% endif %}</span>
+						<span>{{ routine['name'] }}</span>
+					</button>
+				</form>
+				{% endfor %}
+			</div>
 			{% endfor %}
 			{% else %}
 			<p>No routines have been added yet.</p>
 			{% endif %}
 		</div>
 
-		<a href="/routines" class="card-link">View routine →</a>
+		<a href="/routines" class="card-link">Manage routines →</a>
 	</div>
 
 	<div class="dashboard-card">
 		<div class="card-header">
 			<div>
 				<p class="card-label">QUICK ACTIONS</p>
-				<h2>What would you like to do?</h2>
+				<h2>Quick actions</h2>
 			</div>
 		</div>
 
@@ -82,8 +85,9 @@
 					<small>Record something new</small>
 				</div>
 			</a>
-		</div>
-	</div>
+            <a href="{{ url_for('resources') }}" class="action-button"><span aria-hidden="true">▥</span><div><strong>Resources</strong><small>Find helpful information</small></div></a>
+        </div>
+    </div>
 </section>
 
 <section class="recent-section">
@@ -101,7 +105,7 @@
 		<div class="observation-card">
 			<span class="observation-date">{{ observation['date'] }}</span>
 			<h3>{{ observation['activity'] }}</h3>
-			<p>{{ observation['notes'] }}</p>
+			<p>{{ (observation['notes'] or 'A moment worth remembering.') | truncate(180) }}</p>
 		</div>
 		{% endfor %}
 	</div>

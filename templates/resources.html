@@ -15,7 +15,7 @@
 <section class="resource-library">
     <div class="resource-filter-bar" aria-label="Resource categories">
         {% for resource_type in resource_types %}
-        <button type="button" class="resource-filter{% if loop.first %} active{% endif %}" data-filter="{{ resource_type }}">
+        <button type="button" class="resource-filter{% if loop.first %} active{% endif %}" aria-pressed="{{ 'true' if loop.first else 'false' }}" data-filter="{{ resource_type }}">
             {{ resource_type }}
         </button>
         {% endfor %}

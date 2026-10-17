@@ -12,19 +12,20 @@
 
 <body>
 
-    <nav>
-        <div class="logo">Olumira</div>
-
-        <div class="nav-links">
-            <a href="/">Dashboard</a>
-            <a href="/routines">Routines</a>
-            <a href="/communication">Communication</a>
-            <a href="/observations">Observations</a>
-            <a href="/resources">Resources</a>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+    <nav aria-label="Main navigation">
+        <a class="logo" href="{{ url_for('dashboard') }}">Olumira<span class="brand-dot" aria-hidden="true">.</span></a>
+        <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-links" hidden>Menu <span aria-hidden="true">☰</span></button>
+        <div class="nav-links" id="primary-links">
+            {% for endpoint, label in [('dashboard', 'Dashboard'), ('routines', 'Routines'), ('communication', 'Communication'), ('observations', 'Observations'), ('resources', 'Resources')] %}
+            <a href="{{ url_for(endpoint) }}" {% if request.endpoint == endpoint %}aria-current="page"{% endif %}>{{ label }}</a>
+            {% endfor %}
         </div>
+        <span class="profile-placeholder" aria-label="Personal workspace; accounts coming later" title="Personal workspace · accounts coming later">♙</span>
     </nav>
-
-    <main>
+    </header>
+    <main id="main-content" tabindex="-1">
         {% block content %}
         {% endblock %}
     </main>
