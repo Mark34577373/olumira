@@ -18,6 +18,7 @@ SECURITY_HTTP = {
     "olumira/config.py",
     "olumira/forms.py",
     "olumira/privacy_logging.py",
+    "olumira/infrastructure.py",
 }
 
 

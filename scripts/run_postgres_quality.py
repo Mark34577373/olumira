@@ -13,6 +13,7 @@ import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
 
 def main():
@@ -24,6 +25,9 @@ def main():
         help="Run complete pytest suite; default is the two live PostgreSQL cases",
     )
     parser.add_argument("--append-coverage", action="store_true")
+    parser.add_argument(
+        "--artifact-dir", type=Path, default=ROOT / "artifacts/day41-42"
+    )
     args = parser.parse_args()
     binary = args.bin_dir.resolve()
     for name in [
@@ -42,7 +46,7 @@ def main():
     data = directory / "data"
     sock = directory / "socket"
     sock.mkdir(mode=0o700)
-    output = ROOT / "artifacts/day41-42"
+    output = args.artifact_dir
     output.mkdir(parents=True, exist_ok=True)
 
     def run(command, **kwargs):
@@ -129,6 +133,60 @@ def main():
                 "55461",
                 "-U",
                 "qa",
+                "olumira_release_test",
+            ]
+        )
+        release_environment = dict(
+            environment,
+            MIGRATION_DATABASE_URL=f"postgresql+psycopg://qa@/olumira_release_test?host={sock}&port=55461",
+        )
+        subprocess.run(
+            [sys.executable, "scripts/migrate_release.py"],
+            cwd=ROOT,
+            env=release_environment,
+            check=True,
+        )  # nosec B603
+        release_head = run(
+            [
+                "psql",
+                "-h",
+                str(sock),
+                "-p",
+                "55461",
+                "-U",
+                "qa",
+                "-At",
+                "-c",
+                "SELECT version_num FROM alembic_version",
+                "olumira_release_test",
+            ],
+            capture_output=True,
+            text=True,
+        ).stdout.strip()
+        if release_head != "0021":
+            raise RuntimeError("Release runner did not produce the reviewed schema")
+        # Authenticate an encrypted copy before restoring its decrypted bytes.
+        from cryptography.fernet import Fernet
+        from scripts.encrypted_backup import write_encrypted
+
+        key = Fernet.generate_key()
+        payload = (directory / "synthetic.dump").read_bytes()
+        write_encrypted(payload, directory / "synthetic.dump.enc", key)
+        recovered = Fernet(key).decrypt((directory / "synthetic.dump.enc").read_bytes())
+        if recovered != payload:
+            raise RuntimeError("Encrypted backup round trip differed")
+        with open(directory / "recovered.dump", "xb") as handle:
+            os.chmod(handle.name, 0o600)
+            handle.write(recovered)
+        run(
+            [
+                "createdb",
+                "-h",
+                str(sock),
+                "-p",
+                "55461",
+                "-U",
+                "qa",
                 "olumira_restore_test",
             ]
         )
@@ -143,7 +201,7 @@ def main():
                 "qa",
                 "-d",
                 "olumira_restore_test",
-                str(directory / "synthetic.dump"),
+                str(directory / "recovered.dump"),
             ]
         )
         query = [
@@ -167,6 +225,8 @@ def main():
             transport="private Unix socket, TCP disabled",
             tls="not tested",
             dump_restore="passed",
+            encrypted_round_trip="Fernet authenticated, restored decrypted copy",
+            migration_runner_fresh_head=release_head,
             schema_and_counts=original.decode().splitlines(),
             private_directory=str(directory),
         )

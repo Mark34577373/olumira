@@ -376,7 +376,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_configuration_rejects_insecure_email_and_test_mode_never_sends(self):
         base = dict(APP_ENV='production', SECRET_KEY='fictional-configuration-secret-with-sufficient-length',
-                    DATABASE_URL='postgresql://localhost/fictional', RATELIMIT_STORAGE_URI='redis://localhost:6379/15',
+                    DATABASE_URL='postgresql://localhost/fictional?sslmode=verify-full', RATELIMIT_STORAGE_URI='redis://localhost:6379/15',
                     **production_mail_settings())
         for changes in (dict(PUBLIC_APP_URL='http://insecure.example.com'), dict(MAIL_ENCRYPTION_KEY=None),
                         dict(SMTP_PASSWORD=''), dict(MAIL_BACKEND='development'), dict(SMTP_SECURITY='plain')):

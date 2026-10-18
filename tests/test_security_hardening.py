@@ -20,7 +20,7 @@ from support import production_mail_settings
 class SecurityHardeningTests(unittest.TestCase):
     def test_testing_defaults_cannot_reuse_normal_database_or_external_services(self):
         poisoned = dict(
-            DATABASE_URL="postgresql://private.invalid/real",
+            DATABASE_URL="postgresql://private.invalid/real?sslmode=verify-full",
             RATELIMIT_STORAGE_URI="redis://private.invalid:6379/0",
             MAIL_BACKEND="smtp",
             SMTP_PASSWORD="DO-NOT-USE",
@@ -46,7 +46,7 @@ class SecurityHardeningTests(unittest.TestCase):
         values = dict(
             APP_ENV="production",
             SECRET_KEY="fictional-production-config-key-not-a-real-secret",
-            DATABASE_URL="postgresql://localhost/fictional",
+            DATABASE_URL="postgresql://localhost/fictional?sslmode=verify-full",
             RATELIMIT_STORAGE_URI="redis://localhost:6379/15",
             **production_mail_settings()
         )

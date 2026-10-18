@@ -36,6 +36,7 @@ jobs:
           python-version: '3.14'
           cache: pip
       - run: python -m pip install -r requirements-dev.txt
+      - run: python -m gunicorn --config gunicorn.conf.py --check-config app:app
       - run: mkdir -p artifacts/day41-42
       - run: psql -h 127.0.0.1 -U olumira_test -d olumira_test -c 'CREATE DATABASE olumira_security_test'
       - run: python -m pytest -q --cov --cov-report=json --cov-report=xml --junitxml=artifacts/day41-42/pytest.xml

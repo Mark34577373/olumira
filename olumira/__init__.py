@@ -54,7 +54,7 @@ def create_app(config=None):
 
     @app.before_request
     def production_transport():
-        if app.config['APP_ENV'] == 'production' and not request.is_secure:
+        if app.config['APP_ENV'] == 'production' and not request.is_secure and request.endpoint not in {'health.live', 'health.ready'}:
             if request.method not in {'GET', 'HEAD', 'OPTIONS'}:
                 from flask import abort
                 abort(400, description='HTTPS is required')
@@ -215,6 +215,9 @@ def create_app(config=None):
     def database_error(error):
         db.session.rollback()
         return error_page(InternalServerError())
+
+    from .infrastructure import register as register_infrastructure
+    register_infrastructure(app)
 
     from .commands import register_commands
     register_commands(app)

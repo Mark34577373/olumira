@@ -272,3 +272,8 @@ For live database evidence, provide two fresh disposable databases via `TEST_POS
 Operator-only commands (not run automatically): `flask --app app mail-retention` is a dry run; `--apply` scrubs expired encrypted email bodies while retaining metadata. Recovery containment requires `flask --app app security-revoke-access --confirm 'REVOKE ALL ACCESS ARTIFACTS'`; it revokes all old sessions/links/invitations/exports but does not replace a post-backup closure/membership-revocation ledger. No care-history or backup erasure is claimed.
 
 Read [quality evidence](docs/day41-quality-report.md), [security/privacy review](docs/day42-security-review.md) and [real-data release gates](docs/real-data-readiness.md). **REAL-DATA READINESS PENDING**: hosting encryption, deployed TLS/Redis/mail, operational ownership, independent security/privacy/legal review and human release approval remain required. No automatic commits, pushes or deployments.
+
+Day 43 infrastructure: [readiness and test evidence](docs/day43-production-readiness.md),
+[manual Render release](docs/render-deployment.md), [environment inventory](docs/environment-variables.md),
+[backup/recovery](docs/database-backup-recovery.md), [rollback](docs/deployment-rollback.md),
+[operational alerts](docs/incident-response.md). No automatic deployment or real-data approval.

@@ -1,0 +1,38 @@
+# REVIEW ONLY: applying this Blueprint creates BILLABLE services. No auto deploys.
+# Create separate copies/groups/datastores per environment. No production secrets in previews.
+services:
+  - type: web
+    name: olumira-staging
+    runtime: python
+    plan: starter
+    region: ohio
+    autoDeployTrigger: 'off'
+    buildCommand: python -m pip install --no-cache-dir -r requirements.txt
+    startCommand: gunicorn --config gunicorn.conf.py app:app
+    healthCheckPath: /health/ready
+    envVars:
+      - fromGroup: olumira-staging-reviewed
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.14.8
+      - key: TRUSTED_PROXY_HOPS
+        value: '1'
+  - type: cron
+    name: olumira-staging-jobs
+    runtime: python
+    plan: starter
+    region: ohio
+    autoDeployTrigger: 'off'
+    schedule: '* * * * *'
+    buildCommand: python -m pip install --no-cache-dir -r requirements.txt
+    startCommand: python scripts/run_operations.py
+    envVars:
+      - fromGroup: olumira-staging-reviewed
+      - key: APP_ENV
+        value: production
+      - key: PYTHON_VERSION
+        value: 3.14.8
+# Datastores deliberately provisioned separately: external PostgreSQL TLS hostname,
+# verified CA, least-privilege runtime user and rediss:// endpoint must be reviewed.
+# No preDeployCommand: migrator secrets must never enter public web/cron services.

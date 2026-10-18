@@ -127,4 +127,13 @@ def configuration(overrides=None):
     values['SQLALCHEMY_DATABASE_URI'] = url
     values['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     values['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True, 'hide_parameters': True}
+    if environment == 'production':
+        from sqlalchemy.engine import make_url
+        parsed = make_url(url)
+        if parsed.query.get('sslmode') != 'verify-full':
+            raise ValueError('Production PostgreSQL requires sslmode=verify-full and a trusted certificate chain')
+        options = values['SQLALCHEMY_ENGINE_OPTIONS']
+        options.update(pool_size=3, max_overflow=1, pool_timeout=3, pool_recycle=300,
+                       connect_args={'connect_timeout': 3, 'options': '-c statement_timeout=10000 -c lock_timeout=3000'})
+        values['RATELIMIT_STORAGE_OPTIONS'] = {'socket_connect_timeout': 2, 'socket_timeout': 2}
     return values

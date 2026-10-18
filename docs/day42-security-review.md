@@ -119,3 +119,5 @@ No legal determination is made. [HHS describes covered entities/business associa
 **REAL-DATA READINESS PENDING**; controlled fictional demonstration is subject to final test evidence. CI execution, deployed TLS/Redis/mail/DB controls, encrypted/restorable backups, retention/consent/legal review, independent security review, beta feedback, monitoring/incident ownership and authorized human release decision remain gates. See [formal checklist](real-data-readiness.md).
 
 Suggested commit: `security: complete Olumira day 42 security and privacy hardening`
+
+Day 43 operational continuation: [release](render-deployment.md), [backups](database-backup-recovery.md), [alerts/incident ownership](incident-response.md), [rollback](deployment-rollback.md). These prepared procedures do not replace hosted verification or legal approval.
