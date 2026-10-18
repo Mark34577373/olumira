@@ -240,7 +240,16 @@ def main():
                     for path, name in routes:
                         assert page.goto(origin + path).status == 200
                         assert page.locator("h1").count() == 1
-                        assert page.locator("nav a[aria-current=page]").count() == 1
+                        assert (
+                            page.get_by_role("navigation", name="Main navigation")
+                            .locator("a[aria-current=page]")
+                            .count()
+                            == 1
+                        )
+                        for navigation in page.get_by_role("navigation").all():
+                            assert (
+                                navigation.locator("a[aria-current=page]").count() <= 1
+                            )
                         assert not page.evaluate(
                             "document.documentElement.scrollWidth > innerWidth"
                         ), f"Overflow {name} {width}"

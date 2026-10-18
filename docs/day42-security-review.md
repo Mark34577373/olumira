@@ -121,3 +121,9 @@ No legal determination is made. [HHS describes covered entities/business associa
 Suggested commit: `security: complete Olumira day 42 security and privacy hardening`
 
 Day 43 operational continuation: [release](render-deployment.md), [backups](database-backup-recovery.md), [alerts/incident ownership](incident-response.md), [rollback](deployment-rollback.md). These prepared procedures do not replace hosted verification or legal approval.
+
+Day43.5 inventory extension: migration0022 adds profile-bound care plans/goals and
+reference links plus author-private handoff drafts; optional timer seconds are copied
+into immutable routine-session steps. See [commercial upgrade inventory, export and
+retention rules](day43-5-commercial-upgrade.md). The schema now has49tables; the
+original43-table inventory above is historical. Real-data readiness remains pending.

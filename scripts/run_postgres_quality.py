@@ -41,7 +41,12 @@ def main():
     ]:
         if not (binary / name).is_file():
             parser.error("Missing required PostgreSQL binary: " + name)
-    directory = Path(tempfile.mkdtemp(prefix="olumira-pg-qa-", dir="/tmp"))
+    directory = Path(
+        tempfile.mkdtemp(
+            prefix="olumira-pg-qa-",
+            dir="/tmp",  # nosec B108 # mkdtemp creates a random mode-0700 private directory
+        )
+    )
     directory.chmod(0o700)
     data = directory / "data"
     sock = directory / "socket"
@@ -163,7 +168,7 @@ def main():
             capture_output=True,
             text=True,
         ).stdout.strip()
-        if release_head != "0021":
+        if release_head != "0022":
             raise RuntimeError("Release runner did not produce the reviewed schema")
         # Authenticate an encrypted copy before restoring its decrypted bytes.
         from cryptography.fernet import Fernet
@@ -214,7 +219,7 @@ def main():
             "qa",
             "-At",
             "-c",
-            "SELECT version_num FROM alembic_version; SELECT count(*) FROM communication_boards; SELECT count(*) FROM users;",
+            "SELECT version_num FROM alembic_version; SELECT count(*) FROM communication_boards; SELECT count(*) FROM users; SELECT count(*) FROM care_plans; SELECT count(*) FROM handoff_drafts; SELECT coalesce(sum(timer_seconds),0) FROM routine_steps;",
         ]
         original = run(query + ["olumira_security_test"], capture_output=True).stdout
         restored = run(query + ["olumira_restore_test"], capture_output=True).stdout

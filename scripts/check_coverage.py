@@ -12,6 +12,8 @@ SECURITY = {
     "privacy",
     "email_delivery",
     "security_recovery",
+    "care_plans",
+    "handoff_drafts",
 }
 SECURITY_HTTP = {
     "olumira/__init__.py",

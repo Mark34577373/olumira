@@ -31,7 +31,7 @@ do not silently substitute an older vulnerable runtime.
    Validate Blueprint in Render before applying; review proposed charges.
 5. Run existing quality CI for the reviewed SHA; CI does not deploy. Inspect
    dependency/native TLS versions, test outputs and migration diff. Preserve a
-   recoverable backup and record SHA, schema 0021 and operator approval.
+   recoverable backup and record SHA, schema 0022 and operator approval.
 6. In an isolated release environment with APP_ENV=production, runtime settings and
    separate MIGRATION_DATABASE_URL, run `python scripts/migrate_release.py`. It
    acquires a PG advisory lock and runs Flask-Migrate once; a second runner fails

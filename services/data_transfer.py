@@ -35,6 +35,12 @@ from olumira.models import (
     CommunicationPreference,
     FavoriteCommunicationCard,
     FavoriteCommunicationPhrase,
+    CarePlan,
+    CareGoal,
+    CarePlanRoutine,
+    CarePlanBoard,
+    CarePlanTask,
+    HandoffDraft,
     CaregiverTask,
     CaregiverHandoff,
     HandoffRecipient,
@@ -181,6 +187,12 @@ def transfer_sqlite(source, backup):
             "communication_preferences",
             "favorite_communication_cards",
             "favorite_communication_phrases",
+            "care_plans",
+            "care_goals",
+            "care_plan_routines",
+            "care_plan_boards",
+            "care_plan_tasks",
+            "handoff_drafts",
             "caregiver_tasks",
             "caregiver_handoffs",
             "handoff_recipients",
@@ -240,7 +252,9 @@ def transfer_sqlite(source, backup):
             resource_rows = [
                 tuple(row)
                 for row in source_connection.execute(
-                    "SELECT " + ",".join(fields) + " FROM resources ORDER BY id"  # nosec B608 # field names come from Resource metadata
+                    "SELECT "  # nosec B608 # fixed Resource ORM metadata column allowlist
+                    + ",".join(fields)
+                    + " FROM resources ORDER BY id"  # nosec B608 # field names come from Resource metadata
                 )
             ]
             if source_connection.execute(
@@ -253,7 +267,7 @@ def transfer_sqlite(source, backup):
         if connection.dialect.name == "postgresql":
             connection.execute(
                 text(
-                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks, calendar_events, reminder_preferences, resources, resource_bookmarks, dashboard_preferences, onboarding_states, user_preferences, notifications, notification_preferences, data_exports, deletion_requests IN ACCESS EXCLUSIVE MODE"
+                    "LOCK TABLE owners, routines, observations, routine_completions, users, auth_sessions, account_tokens, email_outbox, family_workspaces, workspace_memberships, care_profiles, workspace_invitations, audit_events, routine_steps, routine_completion_snapshots, routine_schedules, routine_schedule_revisions, routine_occurrences, routine_sessions, routine_session_steps, routine_session_events, routine_launch_requests, communication_boards, communication_cards, saved_communication_phrases, communication_preferences, favorite_communication_cards, favorite_communication_phrases, care_plans, care_goals, care_plan_routines, care_plan_boards, care_plan_tasks, handoff_drafts, caregiver_tasks, caregiver_handoffs, handoff_recipients, handoff_tasks, calendar_events, reminder_preferences, resources, resource_bookmarks, dashboard_preferences, onboarding_states, user_preferences, notifications, notification_preferences, data_exports, deletion_requests IN ACCESS EXCLUSIVE MODE"
                 )
             )
         elif connection.dialect.name == "sqlite":
@@ -266,7 +280,7 @@ def transfer_sqlite(source, backup):
             or connection.execute(
                 text("SELECT version_num FROM alembic_version")
             ).scalar()
-            != "0021"
+            != "0022"
         ):
             raise ValueError(
                 "Destination must be migrated to the supported revision first"
@@ -297,6 +311,12 @@ def transfer_sqlite(source, backup):
             CommunicationPreference,
             FavoriteCommunicationCard,
             FavoriteCommunicationPhrase,
+            CarePlan,
+            CareGoal,
+            CarePlanRoutine,
+            CarePlanBoard,
+            CarePlanTask,
+            HandoffDraft,
             CaregiverTask,
             CaregiverHandoff,
             HandoffRecipient,

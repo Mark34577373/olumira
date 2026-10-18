@@ -5,7 +5,7 @@ Reviewed 2026-10-18. Status: locally prepared; no Render resources or deployment
 The factory in `olumira/__init__.py` constructs Flask, SQLAlchemy, Flask-Migrate,
 Flask-Login, CSRF and shared rate limiting. `app.py` exposes `app:app`. Thirteen
 product blueprints now share a separate operational health blueprint. Alembic
-head is 0021; startup does not create tables, migrate or seed. Existing reports:
+head is 0022; startup does not create tables, migrate or seed. Existing reports:
 [Day 41](day41-quality-report.md), [Day 42](day42-security-review.md),
 [real-data gates](real-data-readiness.md). Previous evidence is historical, not a
 substitute for Day 43 execution.

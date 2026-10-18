@@ -80,6 +80,93 @@ class PostgreSQLSecurityTests(unittest.TestCase):
                 ).status_code,
                 404,
             )
+            # Day43.5: use real PostgreSQL for the new profile-bound aggregates.
+            import uuid
+            from olumira.models import CareProfile
+            import test_routine_builder as builders
+
+            profile_id = uuid.uuid4().hex
+            with app.app_context():
+                db.session.add(
+                    CareProfile(
+                        id=profile_id,
+                        workspace_id=wid,
+                        display_name="Fictional PG Fern",
+                    )
+                )
+                db.session.add(
+                    WorkspaceMembership(
+                        id=uuid.uuid4().hex,
+                        workspace_id=wid,
+                        user_id=other,
+                        role="caregiver",
+                        status="active",
+                    )
+                )
+                db.session.commit()
+            with owner.session_transaction() as context:
+                context["workspace_id"] = wid
+                context["profile_id"] = profile_id
+            routine = post(
+                owner,
+                "/routines/new",
+                builders.RoutineBuilderTests.values(
+                    self, profile_id=profile_id, step_timer_seconds=["30", "0", "60"]
+                ),
+            )
+            self.assertEqual(routine.status_code, 302, routine.text)
+            routine_id = routine.location.rsplit("/", 1)[1]
+            plan = post(
+                owner,
+                "/care-plans/new",
+                dict(
+                    scope_workspace=wid,
+                    profile_id=profile_id,
+                    title="Fictional PG plan",
+                    description="",
+                    priorities="",
+                    status="active",
+                    creation_key=uuid.uuid4().hex,
+                    goal_title="Familiar choices",
+                    routine_ids=[routine_id],
+                ),
+            )
+            self.assertEqual(plan.status_code, 302, plan.text)
+            self.assertEqual(owner.get(plan.location).status_code, 200)
+            draft = post(
+                owner,
+                "/care/handoffs/studio",
+                dict(
+                    scope_workspace=wid,
+                    profile_id=profile_id,
+                    recipient=other,
+                    start="2030-01-01T08:00",
+                    end="2030-01-01T16:00",
+                    state="ready",
+                    summary="Fictional PG reviewed handoff",
+                    creation_key=uuid.uuid4().hex,
+                    studio_action="save",
+                ),
+            )
+            self.assertEqual(draft.status_code, 302, draft.text)
+            shared = post(
+                owner,
+                draft.location + "/share",
+                dict(scope_workspace=wid, version=1, confirm="share"),
+            )
+            self.assertEqual(shared.status_code, 302, shared.text)
+            with unrelated.session_transaction() as context:
+                context["workspace_id"] = wid
+                context["profile_id"] = profile_id
+            self.assertEqual(unrelated.get(draft.location).status_code, 404)
+            self.assertEqual(
+                post(
+                    unrelated,
+                    shared.location + "/acknowledge",
+                    dict(scope_workspace=wid),
+                ).status_code,
+                302,
+            )
             with app.app_context():
                 member = db.session.scalar(
                     select(WorkspaceMembership).where(

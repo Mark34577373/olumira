@@ -100,6 +100,59 @@ TEMPLATES = {
     ),
 }
 
+TEMPLATES.update(
+    {
+        "after-school": dict(
+            name="After-school transition",
+            category="Afternoon",
+            icon="leaf",
+            color="sage",
+            titles=[
+                "Put the bag away",
+                "Choose a comfortable space",
+                "Have a quiet moment",
+                "Choose what comes next",
+            ],
+        ),
+        "organization": dict(
+            name="Personal organization",
+            category="Custom",
+            icon="calendar",
+            color="sky",
+            titles=[
+                "Look at the plan",
+                "Choose one small area",
+                "Put familiar things together",
+                "Check what is ready",
+            ],
+        ),
+        "household": dict(
+            name="Household responsibilities",
+            category="Custom",
+            icon="person",
+            color="peach",
+            titles=[
+                "Choose a shared task",
+                "Gather what helps",
+                "Work together",
+                "Put things away",
+            ],
+        ),
+        "communication": dict(
+            name="Daily communication practice",
+            category="Custom",
+            icon="chat",
+            color="lavender",
+            titles=[
+                "Open familiar picture choices",
+                "Make a choice together",
+                "Take time to respond",
+                "Share the next idea",
+            ],
+        ),
+    }
+)
+
 
 class InvalidRoutine(ValueError):
     pass
@@ -147,6 +200,7 @@ def draft(routine):
                 title=step.title,
                 description=step.description,
                 icon=step.icon,
+                timer_seconds=step.timer_seconds,
             )
             for step in steps
         ]
@@ -174,12 +228,18 @@ def from_form(form):
             "version",
         ]
     }
+    timers = form.getlist("step_timer_seconds")
+    if timers and len(timers) != len(lists["step_title"]):
+        raise InvalidRoutine(
+            "Include a timer setting for every step, or leave all timers off."
+        )
     values["steps"] = [
         dict(
             id=lists["step_id"][i],
             title=lists["step_title"][i],
             description=lists["step_description"][i],
             icon=lists["step_icon"][i],
+            timer_seconds=timers[i] if timers else 0,
         )
         for i in range(len(lists["step_title"]))
     ]
@@ -231,6 +291,15 @@ def validate(values):
             raise InvalidRoutine(
                 "Each step needs a title up to 80 characters, an available icon, and an optional description up to 500 characters."
             )
+        try:
+            raw_timer = str(step.get("timer_seconds", 0))
+            if not raw_timer.isdigit() or not 0 <= int(raw_timer) <= 3600:
+                raise ValueError()
+            item["timer_seconds"] = int(raw_timer)
+        except (ValueError, TypeError):
+            raise InvalidRoutine(
+                "Optional timers must be whole seconds from 0 (off) to 3,600."
+            ) from None
         if item["id"]:
             ids.append(item["id"])
         clean_steps.append(item)
@@ -294,8 +363,16 @@ def save(values, routine_id=None, *, checklist=False):
         old_profile = routine.profile_id
         if routine_id and old_profile != clean["profile_id"]:
             from olumira.models import RoutineSchedule, RoutineSession
-            if any(db.session.scalar(select(model.id).where(model.routine_id == routine.id).limit(1)) for model in (RoutineSchedule, RoutineSession)):
-                raise InvalidRoutine("This routine has schedules or saved runs. Duplicate it for another profile to preserve its history.")
+
+            if any(
+                db.session.scalar(
+                    select(model.id).where(model.routine_id == routine.id).limit(1)
+                )
+                for model in (RoutineSchedule, RoutineSession)
+            ):
+                raise InvalidRoutine(
+                    "This routine has schedules or saved runs. Duplicate it for another profile to preserve its history."
+                )
         if (
             routine_id
             and old_profile != clean["profile_id"]
@@ -353,6 +430,7 @@ def save(values, routine_id=None, *, checklist=False):
             if step is None:
                 step = RoutineStep(id=uuid.uuid4().hex, routine_id=routine.id)
                 db.session.add(step)
+            step.timer_seconds = item["timer_seconds"]
             step.title, step.description, step.icon, step.position = (
                 item["title"],
                 item["description"],
@@ -381,6 +459,7 @@ def change_archive(routine_id, version, restore=False):
                 )
         if not restore:
             from services.routine_scheduling import pause_for_archive
+
             pause_for_archive(routine.id)
         routine.archived_at = None if restore else utcnow()
         routine.version += 1

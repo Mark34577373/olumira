@@ -56,6 +56,11 @@ SHARED = (
     "communication_preferences",
     "favorite_communication_cards",
     "favorite_communication_phrases",
+    "care_plans",
+    "care_goals",
+    "care_plan_routines",
+    "care_plan_boards",
+    "care_plan_tasks",
     "caregiver_tasks",
     "caregiver_handoffs",
     "handoff_recipients",
@@ -64,6 +69,7 @@ SHARED = (
     "audit_events",
 )
 PERSONAL = (
+    "handoff_drafts",
     "user_preferences",
     "dashboard_preferences",
     "reminder_preferences",
@@ -227,10 +233,34 @@ def download(raw):
         for name in names:
             table = db.metadata.tables[name]
             query = (
-                select(table).where(table.c.user_id == current_user.id)
+                select(table).where(
+                    (
+                        table.c.created_by
+                        if name == "handoff_drafts"
+                        else table.c.user_id
+                    )
+                    == current_user.id
+                )
                 if grant.scope == "personal"
                 else _table_query(name, g.workspace_id)
             )
+            if name == "handoff_drafts":
+                active = (
+                    select(WorkspaceMembership.workspace_id)
+                    .join(
+                        FamilyWorkspace,
+                        FamilyWorkspace.id == WorkspaceMembership.workspace_id,
+                    )
+                    .where(
+                        WorkspaceMembership.user_id == current_user.id,
+                        WorkspaceMembership.status == "active",
+                        FamilyWorkspace.closed_at.is_(None),
+                    )
+                )
+                query = select(table).where(
+                    table.c.created_by == current_user.id,
+                    table.c.workspace_id.in_(active),
+                )
             rows = _serialize(query, remaining)
             remaining -= len(rows)
             payload["records"][name] = rows
@@ -423,7 +453,16 @@ def close_account(values):
         )
         for name in PERSONAL + ("data_exports",):
             table = db.metadata.tables[name]
-            db.session.execute(delete(table).where(table.c.user_id == user.id))
+            db.session.execute(
+                delete(table).where(
+                    (
+                        table.c.created_by
+                        if name == "handoff_drafts"
+                        else table.c.user_id
+                    )
+                    == user.id
+                )
+            )
 
 
 def cleanup(now=None):

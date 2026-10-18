@@ -298,3 +298,32 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{cursor:not-allo
 
 @media(max-width:700px){.settings-sections{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;max-width:100%;}.settings-sections a{flex:0 0 auto;white-space:nowrap;}.routine-subnav a{flex:0 1 auto;text-align:left;}}
 @media(max-width:430px){.site-header>nav{gap:6px;}.site-header .logo{font-size:20px;}.site-header .menu-toggle{font-size:12px;padding:8px;}.notification-menu summary{min-width:44px;}}
+
+/* Commercial care tools share existing Olumira surfaces and horizontal navigation. */
+.commercial-split {display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:1.5rem;align-items:start;}
+.commercial-split>* {min-width:0;}
+.handoff-preview {position:sticky;top:1rem;}
+.goal-card {border-bottom:1px solid var(--border-color,#dfe9e2);padding:1rem 0;overflow-wrap:anywhere;}
+.local-step-timer {padding:1rem;margin:1rem 0;border:1px solid #c6d8ce;border-radius:18px;background:#f3f8f4;text-align:left;}
+.local-step-timer output {font-size:1.6rem;font-weight:700;font-variant-numeric:tabular-nums;}
+.local-step-timer button,[data-step-undo],[data-preview-reset] {min-height:44px;padding:.5rem .75rem;border:1px solid #a9c2b4;border-radius:12px;background:#fff;color:#194d3c;}
+#preview-steps li {padding:1rem 0;border-bottom:1px solid #d5e3da;overflow-wrap:anywhere;}
+#preview-steps li>svg {width:28px;height:28px;vertical-align:middle;margin-right:.5rem;}
+#preview-steps li[data-complete=true]>strong {text-decoration:line-through;}
+#preview-steps button {min-height:44px;}
+.printable-routine {max-width:900px;margin:auto;padding:2rem;background:white;border-radius:20px;}
+.printable-routine ol {padding:0;list-style:none;counter-reset:print-step;}
+.printable-routine li {counter-increment:print-step;display:flex;gap:1rem;align-items:center;padding:1.5rem 0;border-bottom:2px solid #53665d;break-inside:avoid;}
+.printable-routine li:before {content:counter(print-step);font-size:1.5rem;font-weight:bold;}
+.printable-routine li>div {flex:1;min-width:0;overflow-wrap:anywhere;}
+[data-plan-wizard] section[hidden] {display:none;}
+@media(max-width:768px){.commercial-split{grid-template-columns:minmax(0,1fr)}.handoff-preview{position:static}.printable-routine{padding:1rem}.workspace-context>a{max-width:100%;}.local-step-timer .journal-actions{flex-wrap:wrap;}}
+@media print {
+ body:has(.printable-routine) .site-header,body:has(.printable-routine) .workspace-context,body:has(.printable-routine) .print-controls,body:has(.printable-routine) .skip-link,body:has(.printable-routine) #operation-status,body:has(.printable-routine) .flash-message {display:none!important;}
+ body:has(.printable-routine),body:has(.printable-routine) main,.printable-routine {background:white!important;color:#000!important;box-shadow:none!important;margin:0!important;padding:0!important;max-width:none!important;}
+ .printable-routine h1,.printable-routine h2,.printable-routine p {color:#000!important;}
+ .printable-routine a:after {content:none!important;}
+ @page {margin:16mm;}
+}
+/* A full interactive preview can exceed the viewport; do not let sticky content cover Save. */
+.routine-builder-preview {position:static;}

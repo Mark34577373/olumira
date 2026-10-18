@@ -138,6 +138,7 @@ def start(routine_id, key, revision_id=None, local_date=None):
                         description=template.description,
                         icon=template.icon,
                         position=template.position,
+                        timer_seconds=template.timer_seconds,
                     )
                 )
             event(run, "started")

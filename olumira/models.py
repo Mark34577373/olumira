@@ -193,6 +193,7 @@ class AuditEvent(db.Model):
 
 
 class RoutineStep(db.Model):
+    timer_seconds = db.Column(db.Integer,nullable=False,default=0,server_default='0')
     __tablename__ = 'routine_steps'
     __table_args__ = (db.UniqueConstraint('routine_id','position',name='uq_routine_step_position'),
                      db.CheckConstraint('position >= 0',name='ck_routine_step_position'))
@@ -328,6 +329,7 @@ class RoutineSession(db.Model):
 
 
 class RoutineSessionStep(db.Model):
+    timer_seconds = db.Column(db.Integer,nullable=False,default=0,server_default='0')
     __tablename__ = "routine_session_steps"
     __table_args__ = (
         db.UniqueConstraint("session_id", "position", name="uq_session_step_position"),
@@ -683,3 +685,70 @@ class DeletionRequest(db.Model):
     scope = db.Column(db.String(12), nullable=False)
     status = db.Column(db.String(32), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+
+
+class CarePlan(db.Model):
+    __tablename__ = 'care_plans'
+    __table_args__ = (db.Index('ix_care_plans_scope', 'workspace_id', 'profile_id'), db.CheckConstraint("status IN ('draft','active','archived')", name='ck_care_plan_status'))
+    id = db.Column(db.String(32), primary_key=True)
+    workspace_id = db.Column(db.String(32), db.ForeignKey('family_workspaces.id'), nullable=False)
+    profile_id = db.Column(db.String(32), db.ForeignKey('care_profiles.id'), nullable=False)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.String(2000), nullable=False, default='')
+    priorities = db.Column(db.String(2000), nullable=False, default='')
+    status = db.Column(db.String(12), nullable=False, default='active')
+    version = db.Column(db.Integer, nullable=False, default=1)
+    created_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    updated_by = db.Column(db.String(32), db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class CareGoal(db.Model):
+    __tablename__ = 'care_goals'
+    __table_args__ = (db.CheckConstraint("status IN ('planned','in_progress','completed','paused')", name='ck_care_goal_status'),)
+    id = db.Column(db.String(32), primary_key=True)
+    plan_id = db.Column(db.String(32), db.ForeignKey('care_plans.id', ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.String(1000), nullable=False, default='')
+    category = db.Column(db.String(40), nullable=False, default='Daily support')
+    status = db.Column(db.String(16), nullable=False, default='planned')
+    target_date = db.Column(db.String(10))
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True), nullable=False, default=utcnow, onupdate=utcnow)
+
+
+class CarePlanRoutine(db.Model):
+    __tablename__ = 'care_plan_routines'
+    plan_id = db.Column(db.String(32), db.ForeignKey('care_plans.id', ondelete='CASCADE'), primary_key=True)
+    routine_id = db.Column(db.Integer, db.ForeignKey('routines.id'), primary_key=True)
+
+
+class CarePlanBoard(db.Model):
+    __tablename__ = 'care_plan_boards'
+    plan_id = db.Column(db.String(32), db.ForeignKey('care_plans.id', ondelete='CASCADE'), primary_key=True)
+    board_id = db.Column(db.String(32), db.ForeignKey('communication_boards.id'), primary_key=True)
+
+
+class CarePlanTask(db.Model):
+    __tablename__ = 'care_plan_tasks'
+    plan_id = db.Column(db.String(32), db.ForeignKey('care_plans.id', ondelete='CASCADE'), primary_key=True)
+    task_id = db.Column(db.String(32), db.ForeignKey('caregiver_tasks.id'), primary_key=True)
+
+
+class HandoffDraft(db.Model):
+    __tablename__ = 'handoff_drafts'
+    __table_args__ = (db.Index('ix_handoff_drafts_scope','workspace_id','profile_id','created_by'),db.CheckConstraint("status IN ('draft','ready','shared')",name='ck_handoff_draft_status'))
+    id = db.Column(db.String(32),primary_key=True)
+    workspace_id = db.Column(db.String(32),db.ForeignKey('family_workspaces.id'),nullable=False)
+    profile_id = db.Column(db.String(32),db.ForeignKey('care_profiles.id'))
+    created_by = db.Column(db.String(32),db.ForeignKey('users.id'),nullable=False)
+    recipient_id = db.Column(db.String(32),db.ForeignKey('users.id'),nullable=False)
+    summary = db.Column(db.String(2000),nullable=False)
+    status = db.Column(db.String(12),nullable=False,default='draft')
+    version = db.Column(db.Integer,nullable=False,default=1)
+    period_start = db.Column(db.DateTime(timezone=True),nullable=False)
+    period_end = db.Column(db.DateTime(timezone=True),nullable=False)
+    shared_id = db.Column(db.String(32),db.ForeignKey('caregiver_handoffs.id'))
+    created_at = db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow)
+    updated_at = db.Column(db.DateTime(timezone=True),nullable=False,default=utcnow,onupdate=utcnow)

@@ -42,7 +42,7 @@ def main():
                 origin = f"http://127.0.0.1:{port}"
                 for attempt in range(100):
                     try:
-                        with urllib.request.urlopen(
+                        with urllib.request.urlopen(  # nosec B310 # origin is fixed HTTP loopback with an allocated local port
                             origin + "/health/live?token=fictional-private-marker",
                             timeout=2,
                         ) as response:
@@ -57,7 +57,9 @@ def main():
                 else:
                     raise RuntimeError("WSGI startup deadline")
                 try:
-                    urllib.request.urlopen(origin + "/health/ready", timeout=3)
+                    urllib.request.urlopen(
+                        origin + "/health/ready", timeout=3
+                    )  # nosec B310 # fixed HTTP loopback probe, no user URL
                 except urllib.error.HTTPError as error:
                     assert error.code == 503
                     assert json.load(error) == {"status": "unavailable"}

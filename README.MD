@@ -277,3 +277,8 @@ Day 43 infrastructure: [readiness and test evidence](docs/day43-production-readi
 [manual Render release](docs/render-deployment.md), [environment inventory](docs/environment-variables.md),
 [backup/recovery](docs/database-backup-recovery.md), [rollback](docs/deployment-rollback.md),
 [operational alerts](docs/incident-response.md). No automatic deployment or real-data approval.
+
+Day43.5: [care plans, reviewed handoff drafts, and Visual Routine Studio](docs/day43-5-commercial-upgrade.md).
+Select a care profile, open **Care plans** in the toolbar, connect existing records,
+and use **Prepare a handoff** for a private reviewed draft. Routine timers are optional;
+previewing and timing never save a completed step. Use **Print visual schedule** from a routine.

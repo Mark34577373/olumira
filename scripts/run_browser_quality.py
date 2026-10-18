@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 JOURNEYS = [
+    "check_commercial_care",
     "check_product_experience",
     "check_guided_routines",
     "check_communication_boards",

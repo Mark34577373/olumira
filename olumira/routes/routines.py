@@ -132,9 +132,18 @@ def _draft_action(values):
             index = int(index)
         except (ValueError, TypeError):
             abort(400)
-        if direction not in {"up", "down", "remove"} or not 0 <= index < len(steps):
+        if direction not in {
+            "up",
+            "down",
+            "remove",
+            "duplicate",
+        } or not 0 <= index < len(steps):
             abort(400)
-        if direction == "remove":
+        if direction == "duplicate":
+            if len(steps) >= 30:
+                raise builder.InvalidRoutine("A routine can have up to 30 steps.")
+            steps.insert(index + 1, dict(steps[index], id=""))
+        elif direction == "remove":
             if len(steps) <= 1:
                 raise builder.InvalidRoutine("Keep at least one step in your routine.")
             steps.pop(index)
@@ -542,3 +551,11 @@ def routine_helpers():
 def session_state(session_id):
     run = runs.find(session_id)
     return jsonify(version=run.version, status=run.status)
+
+
+@bp.get("/routines/<int:routine_id>/print")
+def print_routine(routine_id):
+    routine = builder.find(routine_id)
+    return render_template(
+        "routines/print.html", routine=routine, steps=builder.steps_for(routine.id)
+    )

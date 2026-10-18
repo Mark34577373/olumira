@@ -169,6 +169,13 @@ def handoffs():
     return render_template(
         "care/handoffs.html",
         handoffs=rows,
+        creators=dict(
+            db.session.execute(
+                select(User.id, User.display_name).where(
+                    User.id.in_([row.created_by for row in rows])
+                )
+            ).all()
+        ),
         recipients=recipients,
         total=total,
         page=page_number(),
@@ -277,3 +284,202 @@ def care_helpers():
         return url_for(endpoint, **{key: event.target_id})
 
     return dict(activity_url=activity_url)
+
+
+@bp.get("/care-plans")
+def plans():
+    from services import care_plans as plans_service
+
+    return render_template("care/plans.html", plans=plans_service.listing())
+
+
+@bp.route("/care-plans/new", methods=["GET", "POST"])
+@bp.route("/care-plans/<plan_id>/edit", methods=["GET", "POST"])
+def plan_editor(plan_id=None):
+    from services import care_plans as plans_service
+
+    require("care.manage")
+    plan = plans_service.find(plan_id, "care.manage") if plan_id else None
+    values = dict(
+        title=plan.title if plan else "",
+        description=plan.description if plan else "",
+        priorities=plan.priorities if plan else "",
+        status=plan.status if plan else "active",
+        version=plan.version if plan else "",
+        profile_id=g.profile_id or "",
+        creation_key=uuid.uuid4().hex,
+        goal_title="",
+    )
+    selected = plans_service.selected(plan) if plan else {}
+    error = None
+    status = 200
+    if request.method == "POST":
+        context_check()
+        values = {key: request.form.get(key, "") for key in values}
+        if request.form.get("plan_action") == "draft":
+            values["status"] = "draft"
+        selected = {name: request.form.getlist(name) for name in plans_service.LINKS}
+        try:
+            identity = plans_service.save(values, selected, plan_id)
+        except ValueError as exc:
+            error = str(exc)
+            status = 409 if isinstance(exc, care.CareConflict) else 422
+        else:
+            flash(
+                "Care plan saved. Your connected records stay in their original tools.",
+                "success",
+            )
+            return redirect(url_for("care.plan_detail", plan_id=identity))
+    return (
+        render_template(
+            "care/plan_editor.html",
+            plan=plan,
+            values=values,
+            selected=selected,
+            choices=plans_service.choices(),
+            error=error,
+        ),
+        status,
+    )
+
+
+@bp.get("/care-plans/<plan_id>")
+def plan_detail(plan_id):
+    from services import care_plans as plans_service
+
+    plan = plans_service.find(plan_id)
+    return render_template(
+        "care/plan.html", plan=plan, data=plans_service.overview(plan)
+    )
+
+
+@bp.route("/care-plans/<plan_id>/goals/new", methods=["GET", "POST"])
+@bp.route("/care-plans/<plan_id>/goals/<goal_id>/edit", methods=["GET", "POST"])
+def goal_editor(plan_id, goal_id=None):
+    from services import care_plans as plans_service
+    from olumira.models import CareGoal
+
+    plan = plans_service.find(plan_id, "care.manage")
+    goal = (
+        db.session.scalar(
+            select(CareGoal).where(CareGoal.id == goal_id, CareGoal.plan_id == plan.id)
+        )
+        if goal_id
+        else None
+    )
+    if goal_id and not goal:
+        abort(404)
+    fields = ["title", "description", "category", "status", "target_date"]
+    values = {field: (getattr(goal, field) or "") if goal else "" for field in fields}
+    if not goal:
+        values.update(category="Daily support", status="planned")
+    values["version"] = plan.version
+    error = None
+    status = 200
+    if request.method == "POST":
+        context_check()
+        values = {key: request.form.get(key, "") for key in values}
+        try:
+            plans_service.save_goal(plan.id, values, goal_id)
+        except ValueError as exc:
+            error = str(exc)
+            status = 409 if isinstance(exc, care.CareConflict) else 422
+        else:
+            flash("Support goal saved.", "success")
+            return redirect(url_for("care.plan_detail", plan_id=plan.id))
+    return (
+        render_template("care/goal_editor.html", plan=plan, values=values, error=error),
+        status,
+    )
+
+
+@bp.route("/care/handoffs/studio", methods=["GET", "POST"])
+@bp.route("/care/handoffs/drafts/<draft_id>", methods=["GET", "POST"])
+def handoff_studio(draft_id=None):
+    from datetime import timedelta
+    from services import handoff_drafts as studio
+
+    require("care.manage")
+    draft = studio.find(draft_id) if draft_id else None
+    moment = care.utcnow().astimezone(zone(current_app.config["APP_TIMEZONE"]))
+    values = dict(
+        summary=draft.summary if draft else "",
+        profile_id=g.profile_id or "",
+        recipient=draft.recipient_id if draft else "",
+        creation_key=uuid.uuid4().hex,
+        version=draft.version if draft else "",
+        state=draft.status if draft else "draft",
+        start=(
+            aware(draft.period_start)
+            .astimezone(zone(current_app.config["APP_TIMEZONE"]))
+            .strftime("%Y-%m-%dT%H:%M")
+            if draft
+            else (moment - timedelta(hours=8)).strftime("%Y-%m-%dT%H:%M")
+        ),
+        end=(
+            aware(draft.period_end)
+            .astimezone(zone(current_app.config["APP_TIMEZONE"]))
+            .strftime("%Y-%m-%dT%H:%M")
+            if draft
+            else (moment + timedelta(minutes=1)).strftime("%Y-%m-%dT%H:%M")
+        ),
+    )
+    error = None
+    status = 200
+    categories = ["completed", "unfinished", "tasks", "schedule"]
+    observations = []
+    if request.method == "POST":
+        context_check()
+        values = {key: request.form.get(key, "") for key in values}
+        categories = request.form.getlist("categories")
+        observations = request.form.getlist("observation_ids")
+        try:
+            if request.form.get("studio_action") == "generate":
+                if draft and draft.status == "shared":
+                    raise ValueError("Create a new draft to generate another handoff.")
+                suggestion = studio.generate(values, observations, categories)
+                values["summary"] = suggestion["summary"]
+                values["state"] = "draft"
+                flash(
+                    "Suggestion generated for your review. Nothing was saved or shared.",
+                    "info",
+                )
+            else:
+                identity = studio.save(values, draft_id)
+                flash(
+                    "Private handoff draft saved. Review the final preview before sharing.",
+                    "success",
+                )
+                return redirect(url_for("care.handoff_studio", draft_id=identity))
+        except ValueError as exc:
+            error = str(exc)
+            status = 409 if isinstance(exc, care.CareConflict) else 422
+    return (
+        render_template(
+            "care/handoff_studio.html",
+            draft=draft,
+            values=values,
+            error=error,
+            members=care.members(),
+            choices=care.reference_choices(),
+            categories=categories,
+            selected_observations=observations,
+            drafts=studio.listing(),
+        ),
+        status,
+    )
+
+
+@bp.post("/care/handoffs/drafts/<draft_id>/share")
+def share_handoff_draft(draft_id):
+    from services import handoff_drafts as studio
+
+    context_check()
+    if request.form.get("confirm") != "share":
+        abort(400)
+    try:
+        identity = studio.share(draft_id, request.form.get("version"))
+    except ValueError as exc:
+        return failure(exc)
+    flash("Reviewed handoff shared with its authorized recipient.", "success")
+    return redirect(url_for("care.handoff_detail", handoff_id=identity))
