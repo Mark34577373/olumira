@@ -109,3 +109,18 @@ def deliver_pending(limit=20):
                 job.delivered_at, job.last_error = moment, None
                 sent += 1
     return dict(sent=sent, failed=failed, cancelled=cancelled)
+
+
+def expired_payloads(*, apply=False, now=None):
+    """Explicit retention: scrub expired message bodies, retain delivery metadata.
+
+    Dry-run by default. Account/invitation workers already refuse expired jobs.
+    Does not affect usable links, private care records, or infrastructure backups.
+    """
+    from sqlalchemy import func, update
+    moment = int(time.time()) if now is None else int(now)
+    criteria = (EmailOutbox.expires_at <= moment, EmailOutbox.encrypted_payload != '')
+    if not apply:
+        return db.session.scalar(select(func.count()).select_from(EmailOutbox).where(*criteria))
+    with transaction():
+        return db.session.execute(update(EmailOutbox).where(*criteria).values(encrypted_payload='')).rowcount

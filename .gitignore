@@ -33,3 +33,8 @@ artifacts/
 # Private local recovery email previews
 *.eml
 database/mail-preview/
+
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml

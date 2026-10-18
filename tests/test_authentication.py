@@ -65,10 +65,23 @@ class AuthenticationTests(unittest.TestCase):
             self.assertIn('aria-invalid="true"', response.text)
             self.assertNotIn(PASSWORD, response.text)
         self.registration()
-        self.assertEqual(self.registration(email='FICTIONAL@example.com').status_code, 422)
+        self.assertEqual(self.registration(email='FICTIONAL@example.com').status_code, 302)
         with self.app.app_context():
             self.assertEqual(db.session.scalar(select(func.count()).select_from(User)), 1)
             self.assertEqual(db.session.scalar(select(func.count()).select_from(Owner)), 1)
+
+    def test_registration_duplicate_response_does_not_disclose_membership(self):
+        first = self.registration()
+        duplicate = self.registration(email='FICTIONAL@example.com')
+        self.assertEqual((first.status_code, first.location), (duplicate.status_code, duplicate.location))
+        self.assertIn('/auth/check-email', duplicate.location)
+        page = self.client.get(duplicate.location)
+        self.assertNotIn('already exists', page.text)
+        self.assertNotIn(PASSWORD, page.text)
+        self.assertEqual(self.client.get('/').status_code, 302)
+        from olumira.models import EmailOutbox
+        with self.app.app_context():
+            self.assertEqual(db.session.scalar(select(func.count()).select_from(EmailOutbox)), 1)
 
     def test_database_email_uniqueness_and_normalization(self):
         create_user(self.app)

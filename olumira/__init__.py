@@ -52,6 +52,14 @@ def create_app(config=None):
         if request.method == 'POST' and request.endpoint in {'routines.new_routine', 'routines.edit_builder', 'communication.board_editor'}:
             request.max_content_length = 256 * 1024
 
+    @app.before_request
+    def production_transport():
+        if app.config['APP_ENV'] == 'production' and not request.is_secure:
+            if request.method not in {'GET', 'HEAD', 'OPTIONS'}:
+                from flask import abort
+                abort(400, description='HTTPS is required')
+            return redirect(app.config['PUBLIC_APP_URL'].rstrip('/') + request.full_path.rstrip('?'), code=308)
+
     csrf.init_app(app)
 
     from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy
@@ -147,10 +155,11 @@ def create_app(config=None):
         response.headers['X-Robots-Tag'] = 'noindex, nofollow'
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=(), payment=()'
         response.headers['Referrer-Policy'] = 'no-referrer'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'")
+            "img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'")
         if app.config['APP_ENV'] == 'production':
             response.headers['Strict-Transport-Security'] = 'max-age=31536000'
         return response
@@ -167,6 +176,11 @@ def create_app(config=None):
     }
 
     def error_page(error):
+        from werkzeug.exceptions import SecurityError
+        if isinstance(error, SecurityError):
+            # Rejected Host values have no URL adapter; never render url_for.
+            from flask import Response
+            return Response('Invalid request host.', status=400, mimetype='text/plain')
         code = getattr(error, 'code', 500)
         if code >= 500:
             # Log only the status and endpoint, never form data, SQL or exception strings.

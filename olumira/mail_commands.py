@@ -7,6 +7,18 @@ from services.email_delivery import message_for, deliver_pending
 
 
 def register_mail_commands(app):
+    @app.cli.command('mail-retention')
+    @click.option('--apply', is_flag=True, help='Scrub expired encrypted payloads; default is a dry run.')
+    def mail_retention(apply):
+        """Retain delivery metadata while minimizing expired recipient/token/message content."""
+        from services.email_delivery import expired_payloads
+        try:
+            count = expired_payloads(apply=apply)
+        except Exception:
+            db.session.rollback()
+            raise click.ClickException('Mail retention failed; inspect privately. No payloads were logged.') from None
+        click.echo(f'{"Scrubbed" if apply else "Would scrub"} {count} expired email payloads. Delivery metadata and backups are retained.')
+
     @app.cli.command('mail-send-pending')
     @click.option('--limit', default=20, type=click.IntRange(1, 100))
     def send_pending(limit):

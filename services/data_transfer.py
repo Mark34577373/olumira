@@ -101,7 +101,7 @@ def read_snapshot(path):
             records[table.name] = [
                 dict(r)
                 for r in connection.execute(
-                    f'SELECT {",".join(LEGACY_COLUMNS[table.name])} FROM {table.name}'
+                    f'SELECT {",".join(LEGACY_COLUMNS[table.name])} FROM {table.name}'  # nosec B608 # reviewed ORM table/constant columns only
                 )
             ]
     owners = {r["id"] for r in records["owners"]}
@@ -199,7 +199,7 @@ def transfer_sqlite(source, backup):
             if (
                 table in tables
                 and source_connection.execute(
-                    f"SELECT 1 FROM {table} LIMIT 1"
+                    f"SELECT 1 FROM {table} LIMIT 1"  # nosec B608 # table comes from the fixed migration allowlist
                 ).fetchone()
             ):
                 raise ValueError(
@@ -240,7 +240,7 @@ def transfer_sqlite(source, backup):
             resource_rows = [
                 tuple(row)
                 for row in source_connection.execute(
-                    "SELECT " + ",".join(fields) + " FROM resources ORDER BY id"
+                    "SELECT " + ",".join(fields) + " FROM resources ORDER BY id"  # nosec B608 # field names come from Resource metadata
                 )
             ]
             if source_connection.execute(
@@ -344,7 +344,7 @@ def transfer_sqlite(source, backup):
             for name in ("routines", "observations"):
                 connection.execute(
                     text(
-                        f"SELECT setval(pg_get_serial_sequence('{name}', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM {name}"
+                        f"SELECT setval(pg_get_serial_sequence('{name}', 'id'), COALESCE(MAX(id), 1), MAX(id) IS NOT NULL) FROM {name}"  # nosec B608 # fixed routines/observations tuple only
                     )
                 )
     return {name: len(rows) for name, rows in records.items()}

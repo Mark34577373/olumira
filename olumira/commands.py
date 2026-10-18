@@ -8,6 +8,20 @@ from services.data_transfer import backup_sqlite, read_snapshot, transfer_sqlite
 
 
 def register_commands(app):
+    @app.cli.command('security-revoke-access')
+    @click.option('--confirm', required=True)
+    def revoke_access(confirm):
+        """Operator containment: revoke ALL sessions, account links, invitations and export grants."""
+        if confirm != 'REVOKE ALL ACCESS ARTIFACTS':
+            raise click.ClickException('Explicit confirmation is required; nothing changed.')
+        from services.security_recovery import revoke_access_artifacts
+        try:
+            revoke_access_artifacts()
+        except Exception:
+            db.session.rollback()
+            raise click.ClickException('Containment failed; transaction rolled back. Inspect privately.') from None
+        click.echo('All existing access artifacts revoked. Review memberships/closed accounts against the external recovery ledger before reopening traffic.')
+
     @app.cli.command('privacy-maintenance')
     def privacy_maintenance():
         """Expire private download grants and apply inbox retention. No care-history purge."""

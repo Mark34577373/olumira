@@ -92,7 +92,7 @@ def main():
 
             sign_in(page, "fiction-board@example.com")
             page.goto(origin + "/observations")
-            page.get_by_text("Add an observation", exact=True).first.click()
+            page.get_by_role("link", name="Add observation", exact=True).click()
             page.locator("#observation-activity").fill(
                 "Completed Morning Routine Independently"
             )

@@ -43,9 +43,11 @@ def register_user(email: str, display_name: str, password: str):
     display_name = (display_name or '').strip()
     if not 1 <= len(display_name) <= 80 or password_error(password):
         raise ValueError('Invalid registration values')
+    # Hash valid registration attempts before the duplicate check so an existing
+    # address does not take a cheap password-work bypass. No constant-time claim.
+    password_hash = generate_password_hash(password, method=PASSWORD_METHOD)
     if db.session.scalar(select(User.id).where(User.email == email)) is not None:
         return None
-    password_hash = generate_password_hash(password, method=PASSWORD_METHOD)
     owner_id, user_id = uuid.uuid4().hex, uuid.uuid4().hex
     try:
         with transaction() as store:

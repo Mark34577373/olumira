@@ -21,7 +21,7 @@ Flask-Limiter[redis]==4.1.1
 email-validator==2.3.0
 
 # Authenticated encryption for the transactional email outbox
-cryptography==48.0.1
+cryptography==50.0.2
 
 # In-memory private caregiver PDF rendering
 reportlab==5.0.1

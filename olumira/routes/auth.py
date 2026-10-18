@@ -7,6 +7,8 @@ from olumira.extensions import limiter
 from olumira.forms import LoginForm, RegistrationForm
 from services.authentication import normalize_email, register_user, authenticate, start_session, end_session
 
+from olumira.privacy_logging import security_event
+
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 SAFE_DESTINATIONS = frozenset({'/', '/routines', '/communication', '/observations', '/resources', '/auth/settings'})
 
@@ -40,8 +42,8 @@ def register():
             # Registration never implicitly grants a login session.
             from services.account_recovery import request_link
             request_link(user.email, 'verify_email')
-            return redirect(url_for('auth.check_email'))
-        form.email.errors.append('An account with this email already exists. Please sign in.')
+        # Public response does not disclose whether the address already exists.
+        return redirect(url_for('auth.check_email'))
     return render_template('auth/register.html', form=form), 422 if request.method == 'POST' else 200
 
 
@@ -56,17 +58,22 @@ def login():
     if form.validate_on_submit():
         user = authenticate(form.email.data, form.password.data)
         if user and start_session(user):
+            security_event('auth.login_success', user.id)
             return redirect(destination if user.email_verified else url_for('auth.verification'))
         error = 'Email or password is incorrect.'
     elif request.method == 'POST':
         error = 'Email or password is incorrect.'
+    if error:
+        security_event('auth.login_failed')
     return render_template('auth/login.html', form=form, error=error, destination=destination), 401 if error else 200
 
 
 @bp.post('/logout')
 @login_required
 def logout():
+    actor_id = current_user.id
     end_session()
+    security_event('auth.logout', actor_id)
     flash('You’ve signed out safely.', 'success')
     return redirect(url_for('auth.login'))
 
@@ -111,7 +118,7 @@ def resend_verification():
 @bp.get('/check-email')
 def check_email():
     return render_template('auth/message.html', heading='Check your email',
-                           message='Your account is ready for email verification. Open the link in your email, then sign in.')
+                           message='If this address can be registered, a verification link will arrive shortly. Existing members can sign in or request a password reset.')
 
 
 @bp.get('/verification')
@@ -134,6 +141,7 @@ def verify_email():
         if result:
             if current_user.is_authenticated and current_user.id == result:
                 end_session()
+            security_event('auth.email_verified', result)
             return render_template('auth/message.html', heading='Email verified',
                                    message='Your email is confirmed. Sign in to start your day.')
         form.recovery_code.data = ''
@@ -153,6 +161,7 @@ def reset_password():
         if result:
             if current_user.is_authenticated and current_user.id == result:
                 end_session()
+            security_event('auth.password_reset', result)
             return render_template('auth/message.html', heading='Password reset',
                                    message='Your password has been updated and previous sessions have ended. Sign in with your new password.')
         form.recovery_code.data = ''
@@ -172,6 +181,7 @@ def confirm_email():
         if result:
             if current_user.is_authenticated and current_user.id == result:
                 end_session()
+            security_event('auth.email_changed', result)
             return render_template('auth/message.html', heading='Email updated',
                                    message='Your new email is verified and previous sessions have ended. Sign in with your new address.')
         form.recovery_code.data = ''
@@ -206,19 +216,24 @@ def settings():
         if selected.validate_on_submit():
             user_id = current_user.id
             if action == 'profile' and accounts.update_profile(user_id, profile.display_name.data):
+                security_event('auth.profile_updated', user_id)
                 flash('Your display name is updated.', 'success')
                 return redirect(url_for('auth.settings'))
             if action == 'email' and accounts.request_email_change(user_id, email.current_password.data, email.email.data):
+                security_event('auth.email_change_requested', user_id)
                 flash('Check the new address for a confirmation link. Your current email stays active until you confirm.', 'success')
                 return redirect(url_for('auth.settings'))
             if action == 'cancel' and accounts.cancel_email_change(user_id, cancel.current_password.data):
+                security_event('auth.email_change_cancelled', user_id)
                 flash('The pending email change is cancelled.', 'success')
                 return redirect(url_for('auth.settings'))
             if action == 'password' and accounts.change_password(user_id, password.current_password.data, password.password.data):
+                security_event('auth.password_changed', user_id)
                 end_session()
                 flash('Your password is updated. All sessions have ended. Sign in again.', 'success')
                 return redirect(url_for('auth.login'))
             if action == 'sessions' and accounts.sign_out_everywhere(user_id, sessions.current_password.data):
+                security_event('auth.sessions_revoked', user_id)
                 end_session()
                 flash('All sessions have ended. Sign in to continue.', 'success')
                 return redirect(url_for('auth.login'))

@@ -8,3 +8,7 @@ black==26.10.1
 # PDF content and visual verification
 pypdf==6.21.1
 pymupdf==1.28.2
+
+# Day 41 measured quality gates
+pytest-cov==7.1.0
+coverage==7.16.2

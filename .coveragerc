@@ -1,0 +1,13 @@
+[run]
+source = olumira,services
+branch = True
+relative_files = True
+[report]
+show_missing = True
+skip_covered = False
+[html]
+directory = artifacts/day41-42/htmlcov
+[json]
+output = artifacts/day41-42/coverage.json
+[xml]
+output = artifacts/day41-42/coverage.xml

@@ -148,6 +148,7 @@ def main():
                 owner.locator("#routine-name").fill("Fictional garden walk")
                 owner.get_by_role("button", name="Add routine", exact=True).click()
                 owner.goto(origin + "/observations")
+                owner.get_by_role("link", name="Add observation", exact=True).click()
                 owner.locator("#observation-activity").fill("Fictional calm morning")
                 owner.locator("#observation-notes").fill(
                     "Fictional demonstration only: enjoyed choosing a story."

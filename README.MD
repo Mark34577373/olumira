@@ -255,3 +255,20 @@ Content-first dashboard, calendar and journals; compact filters and library card
 ## Day 40.2 — Final premium experience refinement
 
 Slimmer secure context switching, clear Preferences / Account & security navigation, consistent current sections, refined dashboard/calendar controls and purposeful sparse care layouts. No schema or dependency changes. See [the Day 40.2 report](docs/day-40-2.md). Run `venv/bin/python tests/browser/check_navigation_refinement.py` for real native context-switching checks and `venv/bin/python tests/browser/check_premium_transformation.py --day-40-2` for the six-width matrix. Fictional preview: `venv/bin/python scripts/preview_routines.py --port 5092`.
+
+## Days 41–42 — Verified quality and security baseline
+
+Testing now defaults to an independent in-memory database, blocks the normal SQLite database, preserves CSRF and forbids live SMTP in pytest. Runtime requirements pin the security-fixed cryptography 50.0.2. Production enforces HTTPS and trusted hosts; access logs redact query/referrer values; valid new/duplicate registrations share a generic public response. Existing data/schema are unchanged (**0021**).
+
+```sh
+venv/bin/python -m pytest -q --cov --cov-report=json --cov-report=xml --cov-report=html
+venv/bin/python scripts/check_coverage.py
+venv/bin/python scripts/run_browser_quality.py
+venv/bin/python scripts/scan_secrets.py --history
+```
+
+For live database evidence, provide two fresh disposable databases via `TEST_POSTGRES_URL` / `TEST_POSTGRES_SECURITY_URL`, or use `venv/bin/python scripts/run_postgres_quality.py --bin-dir /path/to/postgres/bin --full`. The runner creates private temporary databases, disables TCP, exercises synthetic dump/restore and stops the server afterward. Never point tests at production. CI defines isolated PostgreSQL, coverage/security gates and browser journeys; remote CI execution is not implied by its definition.
+
+Operator-only commands (not run automatically): `flask --app app mail-retention` is a dry run; `--apply` scrubs expired encrypted email bodies while retaining metadata. Recovery containment requires `flask --app app security-revoke-access --confirm 'REVOKE ALL ACCESS ARTIFACTS'`; it revokes all old sessions/links/invitations/exports but does not replace a post-backup closure/membership-revocation ledger. No care-history or backup erasure is claimed.
+
+Read [quality evidence](docs/day41-quality-report.md), [security/privacy review](docs/day42-security-review.md) and [real-data release gates](docs/real-data-readiness.md). **REAL-DATA READINESS PENDING**: hosting encryption, deployed TLS/Redis/mail, operational ownership, independent security/privacy/legal review and human release approval remain required. No automatic commits, pushes or deployments.

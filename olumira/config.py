@@ -2,6 +2,7 @@
 import os
 import base64
 import hashlib
+import secrets
 from urllib.parse import urlsplit
 from datetime import timedelta
 from pathlib import Path
@@ -18,8 +19,8 @@ def configuration(overrides=None):
     secret = os.getenv('SECRET_KEY')
     database_url = os.getenv('DATABASE_URL') if environment != 'testing' else None
     values = dict(
-        APP_ENV=environment, SECRET_KEY=secret or DEV_SECRET,
-        DATABASE=str(ROOT / 'database' / 'olumira.db'),
+        APP_ENV=environment, SECRET_KEY=(secrets.token_urlsafe(48) if environment == 'testing' else secret or DEV_SECRET),
+        DATABASE=':memory:' if environment == 'testing' else str(ROOT / 'database' / 'olumira.db'),
         DATABASE_URL=database_url,
         TESTING=environment == 'testing', DEBUG=False,
         SESSION_COOKIE_HTTPONLY=True, SESSION_COOKIE_SAMESITE='Lax',
@@ -40,10 +41,10 @@ def configuration(overrides=None):
         VERIFY_TOKEN_SECONDS=int(os.getenv('VERIFY_TOKEN_SECONDS', '3600')),
         RESET_TOKEN_SECONDS=int(os.getenv('RESET_TOKEN_SECONDS', '1800')),
         EMAIL_CHANGE_TOKEN_SECONDS=int(os.getenv('EMAIL_CHANGE_TOKEN_SECONDS', '1800')),
-        PUBLIC_APP_URL=os.getenv('PUBLIC_APP_URL', 'http://127.0.0.1:5000' if environment != 'production' else ''),
+        PUBLIC_APP_URL='http://127.0.0.1:5000' if environment == 'testing' else os.getenv('PUBLIC_APP_URL', 'http://127.0.0.1:5000' if environment != 'production' else ''),
         MAIL_BACKEND=os.getenv('MAIL_BACKEND', 'development' if environment != 'production' else 'smtp'),
         MAIL_FROM=os.getenv('MAIL_FROM', 'Olumira <no-reply@example.com>'),
-        MAIL_ENCRYPTION_KEY=os.getenv('MAIL_ENCRYPTION_KEY'),
+        MAIL_ENCRYPTION_KEY=None if environment == 'testing' else os.getenv('MAIL_ENCRYPTION_KEY'),
         SMTP_HOST=os.getenv('SMTP_HOST', ''), SMTP_PORT=int(os.getenv('SMTP_PORT', '587')),
         SMTP_USERNAME=os.getenv('SMTP_USERNAME', ''), SMTP_PASSWORD=os.getenv('SMTP_PASSWORD', ''),
         SMTP_SECURITY=os.getenv('SMTP_SECURITY', 'starttls'), SMTP_TIMEOUT=10,
@@ -97,6 +98,9 @@ def configuration(overrides=None):
     if environment == 'testing':
         # Test processes cannot accidentally deliver real email.
         values['MAIL_BACKEND'] = 'development'
+        values['RATELIMIT_STORAGE_URI'] = 'memory://'
+        values['MAIL_ENCRYPTION_KEY'] = overrides.get('MAIL_ENCRYPTION_KEY')
+        values['PUBLIC_APP_URL'] = overrides.get('PUBLIC_APP_URL', 'http://127.0.0.1:5000')
     if not values['MAIL_ENCRYPTION_KEY']:
         values['MAIL_ENCRYPTION_KEY'] = base64.urlsafe_b64encode(hashlib.sha256(('development-mail:' + values['SECRET_KEY']).encode()).digest()).decode()
     from cryptography.fernet import Fernet
@@ -110,6 +114,16 @@ def configuration(overrides=None):
         url = url.replace('postgres://', 'postgresql+psycopg://', 1)
     elif url.startswith('postgresql://'):
         url = url.replace('postgresql://', 'postgresql+psycopg://', 1)
+    if environment == 'testing':
+        from sqlalchemy.engine import make_url
+        parsed = make_url(url)
+        if parsed.get_backend_name() == 'sqlite' and parsed.database not in (None, '', ':memory:'):
+            target = Path(parsed.database).resolve()
+            normal = (ROOT / 'database' / 'olumira.db').resolve()
+            if target == normal or target.is_file() and normal.is_file() and target.samefile(normal):
+                raise ValueError('Testing must not use the normal application database')
+    if environment == 'production' and not values['TRUSTED_HOSTS']:
+        values['TRUSTED_HOSTS'] = [public_url.hostname]
     values['SQLALCHEMY_DATABASE_URI'] = url
     values['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     values['SQLALCHEMY_ENGINE_OPTIONS'] = {'pool_pre_ping': True, 'hide_parameters': True}
