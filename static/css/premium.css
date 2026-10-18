@@ -327,3 +327,10 @@ button:disabled,input:disabled,select:disabled,textarea:disabled{cursor:not-allo
 }
 /* A full interactive preview can exceed the viewport; do not let sticky content cover Save. */
 .routine-builder-preview {position:static;}
+
+/* Saved setup actions share spacing at every viewport width. */
+.onboarding-actions{display:flex;flex-wrap:wrap;align-items:center;gap:16px;clear:both;}
+.onboarding-actions form{margin:0;display:flex;}
+.onboarding-actions .text-link{display:inline-flex;align-items:center;min-height:44px;}
+.onboarding-actions .setup-revisit{background:#fff;color:var(--green);}
+.onboarding-actions .setup-revisit:hover{background:var(--green-soft);color:var(--green-deep);}
