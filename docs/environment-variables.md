@@ -13,7 +13,7 @@ production credentials to local tests. The template refers to an existing
 | RATELIMIT_STORAGE_URI | Authenticated external `rediss://…` with normal certificate validation; never `ssl_cert_reqs=none` |
 | PUBLIC_APP_URL | Exact canonical HTTPS origin |
 | TRUSTED_HOSTS | Canonical hostname(s), comma separated; default derives canonical URL; allow health-check host explicitly when necessary |
-| TRUSTED_PROXY_HOPS | `1` only after verifying Render single proxy boundary; Flask trusts forwarded proto/for, never forwarded Host |
+| TRUSTED_PROXY_HOPS | Explicitly `1` for standard Render web ingress; `0` for direct/local servers. Render web-service production startup rejects `0` to prevent HTTPS self-redirects. Trusts forwarded proto/for only, never Host/port/prefix; do not expose upstream port to arbitrary clients. |
 | MAIL_BACKEND | `smtp` |
 | MAIL_FROM | Domain-verified sender, not example.com default |
 | MAIL_ENCRYPTION_KEY | Independent Fernet key; retain recovery copy in restricted vault |

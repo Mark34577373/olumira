@@ -80,3 +80,87 @@ Paid pre-deploy hooks exist, but this template deliberately uses a separate
 credential-isolated migration job. No persistent disk is necessary today. Render
 provides TLS ingress and metrics, but selecting a plan does not configure alerts,
 least privilege, recovery drills or consent/legal requirements automatically.
+
+## HTTPS self-redirect loop: Render proxy configuration
+
+Render terminates public HTTPS and sends HTTP to Gunicorn. Olumira deliberately
+sets Gunicorn `forwarded_allow_ips=''`: Flask's opt-in ProxyFix owns proxy trust.
+With `TRUSTED_PROXY_HOPS=0`, Flask sees HTTP, and `production_transport` returns a
+308 to `PUBLIC_APP_URL` even when the browser already requested that HTTPS URL.
+The health endpoints are exempt, so a healthy/live deploy does not rule this out.
+
+Observed on 2026-10-22 using anonymous HEAD requests: both
+`https://olumira.onrender.com/` and `/auth/login` returned 308 with `Location`
+identical to their request URL and Olumira security headers. No session is needed
+for this loop; it precedes authentication, onboarding and workspace resolution.
+
+In Render's web-service Environment (or its reviewed environment group), set:
+
+```text
+APP_ENV=production
+PUBLIC_APP_URL=https://olumira.onrender.com
+TRUSTED_PROXY_HOPS=1
+TRUSTED_HOSTS=olumira.onrender.com
+```
+
+Check for conflicting service/group values. `render.yaml` already specifies one
+hop for the web service; manually created services still require the environment
+setting. No Python default is changed to trust headers automatically. Production
+startup on Render web services now rejects zero hops with an actionable error instead of
+starting a service that loops. Local/direct servers retain the zero-hop default.
+
+ProxyFix accepts the rightmost configured proto/client-IP value from the reviewed
+proxy boundary; x_host/x_port/x_prefix stay zero. Client IP is needed for existing
+rate limits. ProxyFix counts values, **not trusted source IPs**: the upstream must
+remain reachable only through trusted infrastructure which overwrites/appends
+correct forwarded values. Do not set Gunicorn forwarded_allow_ips='*', trust
+forwarded Host, increase hop count for Cloudflare merely because its headers are
+visible, or disable HTTPS/cookies/CSRF to bypass this failure. Additional ingress
+proxies require a separate topology/header review. Render private-network callers
+are also part of the trusted infrastructure boundary; do not expose the upstream
+port to untrusted services.
+
+After operator-approved deployment/restart, verify:
+
+```sh
+curl -I https://olumira.onrender.com/
+curl -I https://olumira.onrender.com/auth/login
+curl -IL --max-redirs 5 https://olumira.onrender.com/dashboard
+curl -I http://olumira.onrender.com/
+```
+
+Expect HTTPS public/login pages to return 200, protected dashboard to terminate
+at login for anonymous users, and HTTP to redirect to HTTPS at Render. Existing
+308 responses can be browser-cached: test with curl/fresh browser profile after
+fixing the server, then clear site data if needed. Cookie clearing alone does not
+fix a server transport loop. Recheck login, secure cookies, verification/setup,
+workspace selection and logout; never print session cookies or credentials.
+
+Regression command:
+
+```sh
+venv/bin/python -m pytest -q tests/test_proxy_redirects.py tests/test_security_hardening.py tests/test_infrastructure.py tests/test_authentication.py tests/test_onboarding.py
+```
+
+Sources: [Render TLS termination](https://render.com/docs/web-services#connecting-from-the-public-internet)
+and [Werkzeug proxy trust](https://werkzeug.palletsprojects.com/en/stable/middleware/proxy_fix/).
+These local tests simulate the HTTP upstream with trusted forwarded headers and
+use isolated fictional data. They do not claim the corrected code/environment has
+been deployed or that the live site has been fixed.
+
+The startup guard uses Render-provided `RENDER=true` and
+`RENDER_SERVICE_TYPE=web`; cron/worker/private services are not forced to trust
+forwarded headers. Keep this start command so its explicit forwarding policy is used:
+
+```sh
+gunicorn --config gunicorn.conf.py app:app
+```
+
+Do not add conflicting proxy trust flags through `GUNICORN_CMD_ARGS`.
+
+Local verification on 2026-10-22: the combined regression command above passed
+**42 tests** in 63.52s. After narrowing the startup guard to web services (leaving
+cron/worker/private services unaffected), the six new proxy tests passed again in
+6.71s. Each run emitted the existing OpenSSL legacy-provider warning.
+`git diff --check` passed. No Render environment was changed and nothing was
+committed, pushed or deployed.

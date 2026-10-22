@@ -37,7 +37,10 @@ def create_app(config=None):
     from werkzeug.middleware.proxy_fix import ProxyFix
     hops = app.config['TRUSTED_PROXY_HOPS']
     if hops:
-        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops, x_host=0)
+        # Opt-in only behind the reviewed proxy boundary. Never accept forwarded
+        # host, port or prefix; the original Host remains subject to TRUSTED_HOSTS.
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=hops, x_proto=hops,
+                                x_host=0, x_port=0, x_prefix=0)
     login_manager.init_app(app)
     login_manager.session_protection = 'strong'
     login_manager.login_view = 'auth.login'

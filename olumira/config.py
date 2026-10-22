@@ -81,6 +81,9 @@ def configuration(overrides=None):
         values['SESSION_COOKIE_DOMAIN'] = None
     if not 0 <= values['TRUSTED_PROXY_HOPS'] <= 2:
         raise ValueError('TRUSTED_PROXY_HOPS must be 0, 1, or 2')
+    if (environment == 'production' and os.getenv('RENDER') == 'true'
+            and os.getenv('RENDER_SERVICE_TYPE') == 'web' and values['TRUSTED_PROXY_HOPS'] == 0):
+        raise ValueError('Render terminates HTTPS at its proxy: configure TRUSTED_PROXY_HOPS=1 for the standard Render ingress before starting production')
     if not 60 <= values['AUTH_IDLE_SECONDS'] <= values['AUTH_SESSION_SECONDS'] <= 604800:
         raise ValueError('Session timeouts must be between one minute and seven days, idle <= absolute')
     public_url = urlsplit(values['PUBLIC_APP_URL'])
