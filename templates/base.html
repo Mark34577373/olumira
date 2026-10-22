@@ -51,17 +51,19 @@
     </nav>
     </header>
     {% if g.workspace_choices|default([]) and request.endpoint!='onboarding.setup' %}
-    <section class="workspace-context" aria-label="Active family workspace and care profile"><a class="text-link" href="{{ url_for('care.plans') }}">Care plans</a>
+    <section class="workspace-context care-context-toolbar" aria-label="Active family workspace and care profile">
+        <div class="context-summary"><p class="eyebrow">ACTIVE CARE CONTEXT</p><p class="context-current"><strong>{{ g.workspace.name }}</strong><span>{{ g.profile.display_name if g.profile else 'Workspace-wide care' }}</span></p><p class="context-help">Choose an option, then switch to apply it.</p></div>
+        <div class="context-links"><a class="text-link" href="{{ url_for('care.plans') }}">Open care plans →</a><span class="role-badge" aria-label="Workspace role: {{ g.membership.role }}" title="{{ 'Read-only access; a workspace owner can change your role.' if g.membership.role=='viewer' else 'Your role in this workspace' }}">{{ g.membership.role }}</span></div>
         <form method="post" action="{{ url_for('workspaces.select_workspace') }}" class="workspace-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label for="active-workspace">Workspace</label><select name="workspace_id" id="active-workspace">
-            {% for member,workspace in g.workspace_choices %}<option value="{{ workspace.id }}" {% if workspace.id==g.workspace_id %}selected{% endif %}>{{ workspace.name }}</option>{% endfor %}</select><button class="routine-button">Switch workspace</button>
+            <div class="context-field"><label for="active-workspace">Family workspace</label><select name="workspace_id" id="active-workspace">
+            {% for member,workspace in g.workspace_choices %}<option value="{{ workspace.id }}" {% if workspace.id==g.workspace_id %}selected{% endif %}>{{ workspace.name }}</option>{% endfor %}</select></div><button class="routine-button">Switch workspace</button>
         </form>
         <form method="post" action="{{ url_for('workspaces.select_profile') }}" class="workspace-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            {% if request.blueprint=='calendar' %}<input type="hidden" name="return_to" value="calendar">{% endif %}{% if request.blueprint=='observations' %}<input type="hidden" name="return_to" value="observations">{% endif %}{% if request.blueprint=='communication' %}<input type="hidden" name="return_to" value="communication">{% endif %}<label for="active-profile">Care profile</label><select name="profile_id" id="active-profile"><option value="">Workspace-wide care</option>{% for profile in g.profiles %}<option value="{{ profile.id }}" {% if profile.id==g.profile_id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select><button class="routine-button">Switch profile</button>
+            {% if request.blueprint=='calendar' %}<input type="hidden" name="return_to" value="calendar">{% endif %}{% if request.blueprint=='observations' %}<input type="hidden" name="return_to" value="observations">{% endif %}{% if request.blueprint=='communication' %}<input type="hidden" name="return_to" value="communication">{% endif %}
+            <div class="context-field"><label for="active-profile">Care profile</label><select name="profile_id" id="active-profile"><option value="">Workspace-wide care</option>{% for profile in g.profiles %}<option value="{{ profile.id }}" {% if profile.id==g.profile_id %}selected{% endif %}>{{ profile.display_name }}</option>{% endfor %}</select></div><button class="routine-button">Switch profile</button>
         </form>
-        <span class="role-badge" aria-label="Workspace role: {{ g.membership.role }}" title="{{ 'Read-only access; a workspace owner can change your role.' if g.membership.role=='viewer' else 'Your role in this workspace' }}">{{ g.membership.role }}</span>
     </section>
     {% endif %}
     <main class="premium-main" id="main-content" tabindex="-1">

@@ -12,8 +12,8 @@
 </svg>
 {%- endmacro %}
 
-{% macro progress_bar(value, label, class_name='') -%}
-<progress class="progress-bar {{ class_name }}" aria-label="{{ label }}" value="{{ value }}" max="100">{{ value }}%</progress>
+{% macro progress_bar(value, label, class_name='', checklist=false) -%}
+<progress {% if checklist %}data-checklist-progress {% endif %}class="progress-bar {{ class_name }}" aria-label="{{ label }}" value="{{ value }}" max="100">{{ value }}%</progress>
 {%- endmacro %}
 
 {% macro alert(message, kind='success') -%}

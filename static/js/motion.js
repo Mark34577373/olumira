@@ -52,10 +52,6 @@
   const visibility = () => {root.dataset.motionVisible=String(!document.hidden);};
   document.addEventListener('visibilitychange',visibility);visibility();
   const gardens = document.querySelectorAll('.garden-illustration');
-  if ('IntersectionObserver' in window) {
-    const observer=new IntersectionObserver(entries => entries.forEach(entry => {entry.target.dataset.gardenActive=String(entry.isIntersecting);}),{threshold:.05});
-    gardens.forEach(el => observer.observe(el));
-  } else gardens.forEach(el => {el.dataset.gardenActive='true';});
   const enter = (el,index=0,settle=false) => {
     if (!allowed(el)) return;
     el.style.setProperty('--motion-order',Math.min(index,4));
@@ -69,10 +65,15 @@
   const sections=document.querySelectorAll('.public-section,.public-showcase,.values-grid,.process-details>section,.closing-section,.public-steps>li');
   if ('IntersectionObserver' in window) {
     const observer=new IntersectionObserver(entries => entries.forEach(entry => {
-      if (entry.isIntersecting) {enter(entry.target);observer.unobserve(entry.target);}
-    }),{threshold:.08});
-    sections.forEach(el => observer.observe(el));
-  } // No observer / no script: all content is simply visible.
+      if (entry.target.matches('.garden-illustration')) {
+        entry.target.dataset.gardenActive=String(entry.isIntersecting);
+      } else if (entry.isIntersecting) {
+        enter(entry.target);observer.unobserve(entry.target);
+      }
+    }),{threshold:.05});
+    [...gardens,...sections].forEach(el => observer.observe(el));
+  } else gardens.forEach(el => {el.dataset.gardenActive='true';});
+  // No observer / no script: every section remains visible.
   document.addEventListener('submit',event => {
     const form=event.target;
     if (!(form instanceof HTMLFormElement) || form.method.toLowerCase()!=='get' || event.defaultPrevented) return;

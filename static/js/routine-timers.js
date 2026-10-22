@@ -4,7 +4,8 @@
  function render(node,state){
    const left=state.deadline===null ? state.remaining : Math.max(0,state.deadline-Date.now());
    node.dataset.timerState=state.deadline!==null ? 'running' : (left===0 ? 'finished' : 'paused');
-   node.querySelector('[data-timer-output]').textContent=`${Math.ceil(left/1000)}s`;
+   const output=node.querySelector('[data-timer-output]'),label=`${Math.ceil(left/1000)}s`;
+   if(output.textContent!==label)output.textContent=label;
    if(state.deadline!==null && left===0){state.remaining=0;state.deadline=null;node.dataset.timerState='finished';node.querySelector('[data-timer-status]').textContent='Time guide finished. Take the time you need; complete the step separately.';}
  }
  document.addEventListener('click',event=>{

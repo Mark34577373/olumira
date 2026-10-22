@@ -1,4 +1,4 @@
-from flask import Blueprint, abort, g, redirect, render_template, request, url_for
+from flask import Blueprint, abort, g, redirect, render_template, request, url_for, jsonify, flash
 from services.routines import (
     ROUTINE_TEMPLATES,
     add_routine,
@@ -16,8 +16,35 @@ bp = Blueprint("routines", __name__)
 
 @bp.route("/routines/<int:routine_id>/toggle", methods=["POST"])
 def toggle_routine_completion(routine_id):
-    if not toggle_routine(g.owner_id, routine_id):
+    enhanced = request.accept_mimetypes.best == 'application/json'
+    desired = None
+    expected_date = None
+    if enhanced or 'completed' in request.form:
+        if request.form.get('completed') not in {'true', 'false'}:
+            abort(400)
+        if (request.form.get('scope_workspace') != g.workspace_id or
+                request.form.get('scope_profile') != (g.profile_id or '')):
+            abort(409)
+        from services.database import today_string
+        expected_date = request.form.get('checklist_date')
+        if expected_date != today_string():
+            abort(409)
+        desired = request.form['completed'] == 'true'
+    try:
+        found = toggle_routine(g.owner_id, routine_id, desired, expected_date)
+    except ValueError:
+        abort(409)
+    if not found:
         abort(404)
+    if enhanced:
+        from services.database import today_string
+        items = get_routines(g.owner_id, checklist_only=True)
+        completed, total, progress = summarize_progress(items)
+        return jsonify(workspace_id=g.workspace_id, profile_id=g.profile_id or '',
+                       checklist_date=today_string(), completed=completed, total=total,
+                       progress=progress, items=[dict(id=item['id'], completed=bool(item['completed'])) for item in items])
+    if desired is not None:
+        flash('Checklist updated.', 'success')
     endpoint = {
         "dashboard": "dashboard.dashboard",
         "routines": "routines.routines",

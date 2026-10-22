@@ -96,14 +96,19 @@ def _owned(owner_id, routine_id):
     )
 
 
-def toggle_routine(owner_id, routine_id):
+def toggle_routine(owner_id, routine_id, desired=None, expected_date=None):
     with transaction() as session:
         routine = _owned(owner_id, routine_id)
         if routine is None or not routine.is_checklist:
             return False
-        care_audit("routine.completed_changed", routine_id)
-        key = (routine_id, today_string())
+        day = today_string()
+        if expected_date is not None and expected_date != day:
+            raise ValueError('The checklist date changed. Reload before continuing.')
+        key = (routine_id, day)
         completion = session.get(RoutineCompletion, key)
+        if desired is not None and bool(completion) == desired:
+            return True
+        care_audit("routine.completed_changed", routine_id)
         if completion:
             session.delete(completion)
         else:

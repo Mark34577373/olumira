@@ -81,6 +81,7 @@ def main():
                     page.locator("#email").fill(email)
                     page.locator("#password").fill(PASSWORD)
                     page.locator(".auth-submit").click()
+                    page.goto(origin + "/")
                     page.wait_for_url(origin + "/")
 
                 def select_profile(page):

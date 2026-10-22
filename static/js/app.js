@@ -10,8 +10,11 @@ if (savedScrollY !== null) {
 }
 
 document.querySelectorAll(".task-form").forEach((form) => {
-	form.addEventListener("submit", () => {
-		try { sessionStorage.setItem(routineScrollKey, String(window.scrollY)); } catch { /* Optional scroll restoration. */ }
+	form.addEventListener("submit", (event) => {
+        queueMicrotask(() => {
+            if (event.defaultPrevented) return;
+            try { sessionStorage.setItem(routineScrollKey, String(window.scrollY)); } catch { /* Optional scroll restoration. */ }
+        });
 	});
 });
 
@@ -34,7 +37,7 @@ if (resourceFilterRoot) {
 		detailCopy.textContent = copy;
 		detailPanel.hidden = false;
         detailPanel.focus({ preventScroll: true });
-		detailPanel.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+		detailPanel.scrollIntoView({ behavior: (window.OlumiraMotion ? window.OlumiraMotion.allowed(detailPanel) : !window.matchMedia("(prefers-reduced-motion: reduce)").matches) ? "smooth" : "auto", block: "start" });
 	};
 
 	const hideDetail = (restoreFocus = false) => {
@@ -239,20 +242,6 @@ window.addEventListener('pageshow', (event) => {
     if (event.persisted && document.body.dataset.authenticated === 'true') window.location.reload();
 });
 
-document.querySelectorAll('.account-menu').forEach((accountMenu) => {
-    accountMenu.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            event.stopPropagation();
-            accountMenu.open = false;
-            accountMenu.querySelector('summary').focus();
-        }
-    });
-    document.addEventListener('click', (event) => {
-        if (!accountMenu.contains(event.target)) accountMenu.open = false;
-    });
-});
-
-
 // Link secrets stay out of HTTP URLs, browser storage, and subsequent history entries.
 const accountLinkForm = document.querySelector('[data-account-link]');
 if (accountLinkForm) {
@@ -331,9 +320,23 @@ document.querySelectorAll('[data-open-disclosure]').forEach(link => link.addEven
         openLinkedDisclosure();
     }
 }));
-document.querySelectorAll('.routine-card-options,.board-options').forEach(menu => {
-    menu.addEventListener('keydown', event => { if (event.key === 'Escape') { event.stopPropagation(); menu.open = false; menu.querySelector('summary').focus(); } });
-    document.addEventListener('click', event => { if (!menu.contains(event.target)) menu.open = false; });
+// One delegated handler for all native popovers, rather than one per card.
+const popupSelector='.account-menu,.routine-card-options,.board-options';
+const popupMenus=[...document.querySelectorAll(popupSelector)];
+document.addEventListener('keydown',event=>{
+    if(event.key!=='Escape') return;
+    const menu=event.target.closest(popupSelector);
+    if(!menu?.open) return;
+    event.preventDefault();event.stopPropagation();menu.open=false;
+    menu.querySelector('summary').focus();
+},true);
+document.addEventListener('click',event=>{
+    popupMenus.forEach(menu=>{
+        if(!menu.open || menu.contains(event.target)) return;
+        const restore=menu.contains(document.activeElement);
+        menu.open=false;
+        if(restore) menu.querySelector('summary').focus({preventScroll:true});
+    });
 });
 document.querySelectorAll('[data-preference-form]').forEach(form => {
     const status = form.querySelector('[data-preference-status]');

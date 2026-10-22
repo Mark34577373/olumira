@@ -79,6 +79,7 @@ def main():
                 page.locator("#email").fill(email)
                 page.locator("#password").fill(PASSWORD)
                 page.get_by_role("button", name="Sign in", exact=True).click()
+                page.goto(origin + "/")
                 expect(page.locator("#active-workspace")).to_be_visible()
                 if chosen:
                     page.locator("#active-workspace").select_option(fixture.ws)

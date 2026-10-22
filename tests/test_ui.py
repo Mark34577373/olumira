@@ -78,7 +78,7 @@ class InterfaceTests(unittest.TestCase):
 
     def test_dashboard_links_and_local_artwork(self):
         html = self.client.get('/').get_data(as_text=True)
-        self.assertEqual(html.count('class="action-button"'), 4)
+        self.assertEqual(html.count('class="action-button"'), 6)
         with self.client.get('/static/images/welcome-garden.svg') as artwork:
             self.assertEqual(artwork.status_code, 200)
         self.assertIn('No observations yet', html)

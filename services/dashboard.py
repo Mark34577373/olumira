@@ -153,6 +153,8 @@ def dashboard_context(owner_id):
     )
     from services.onboarding import get as setup_state, STEPS
 
+    from services.database import today_string
+    result["checklist_date"] = today_string()
     result["setup_state"] = setup_state()
     result["setup_steps"] = STEPS
     return result

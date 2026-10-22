@@ -85,7 +85,7 @@ class PublicExperienceTests(unittest.TestCase):
 
     def test_contact_honest_unavailable_validation_csrf_and_rate_limit(self):
         self.assertEqual(self.client.post('/contact',data={}).status_code,400)
-        self.assertIn('<fieldset disabled>',self.client.get('/contact').text)
+        self.assertNotIn('<form',self.client.get('/contact').text)
         response=post(self.client,'/contact',dict(name=' ',email='invalid',inquiry='wrong',message='x'*2001))
         self.assertEqual(response.status_code,422)
         response=post(self.client,'/contact',dict(name='Fictional visitor',email='fictional-contact@example.com',inquiry='beta',message='Fictional inquiry'))
