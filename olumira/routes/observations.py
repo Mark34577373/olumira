@@ -79,6 +79,7 @@ def observations():
             error = str(exc)
             status = 422
         else:
+            flash("Observation saved. Your moment is safely recorded.", "success")
             return redirect(url_for("observations.observations", saved="1"))
     try:
         filters = {k: request.args.get(k, "") for k in FILTERS}
@@ -97,7 +98,6 @@ def observations():
             "observations.html",
             form_values=values,
             observation_error=error,
-            observation_saved=request.args.get("saved") == "1",
             observations=rows,
             total=total,
             page=page,

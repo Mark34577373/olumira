@@ -24,23 +24,24 @@
  const text=()=>words.map(word=>word.text).join(' ');
  const available=()=>supported&&enabled.checked&&voices.length>0&&access;
  const controls=()=>{speakButton.disabled=!words.length||!available();replayButton.disabled=!lastSpoken||!available();removeLast.disabled=clear.disabled=!words.length;if(saveOpen)saveOpen.disabled=!words.length||!access;};
- const stop=(message='Speech stopped. Your message is still here.')=>{sequence++;if(supported)synth.cancel();stopButton.disabled=true;status.textContent=message;};
+ const stop=(message='Speech stopped. Your message is still here.')=>{speakButton.dataset.speaking='false';sequence++;if(supported)synth.cancel();stopButton.disabled=true;status.textContent=message;};
  const update=()=>{
   strip.replaceChildren();
   if(!words.length){const p=document.createElement('p');p.textContent='Choose a picture to begin.';strip.append(p);}
   words.forEach((word,index)=>{const button=document.createElement('button');button.type='button';button.className='phrase-token';button.textContent=word.label+' ×';button.setAttribute('aria-label',`Remove word ${index+1}: ${word.label}`);button.addEventListener('click',()=>{words.splice(index,1);stop();update();const next=strip.querySelectorAll('button')[Math.min(index,words.length-1)];(next||clear).focus();});strip.append(button);});
+  if(!words.length)grid.querySelectorAll('[data-selected]').forEach(card=>{delete card.dataset.selected;card.removeAttribute('aria-current');});
   written.textContent=text();controls();
  };
  const speak=message=>{
   if(!available()){status.textContent=!supported?'Speech is unavailable in this browser. Your written message still works.':!enabled.checked?'Speech is off. Your written message stays visible.':'No local voice is available yet. Try another browser or device; your written message stays visible.';return;}
   const selected=voices.find(v=>v.voiceURI===voiceSelect.value)||voices[0];
   if(!selected?.localService)return; // Never fall back to an unreviewed remote voice.
-  sequence++;const current=sequence;synth.cancel();
+  sequence++;const current=sequence;speakButton.dataset.speaking='false';synth.cancel();
   const utterance=new SpeechSynthesisUtterance(message);utterance.voice=selected;utterance.lang=selected.lang;utterance.rate=Number(rate.value);utterance.volume=1;utterance.pitch=1;
   lastSpoken=message;status.textContent='Speaking…';stopButton.disabled=false;controls();
-  utterance.onstart=()=>{if(current===sequence)status.textContent='Speaking…';};
-  utterance.onend=()=>{if(current===sequence){status.textContent='Finished speaking. Your message is still here.';stopButton.disabled=true;}};
-  utterance.onerror=()=>{if(current===sequence){status.textContent='Speech could not play. Your written message is still here. Try Speak or Replay again.';stopButton.disabled=true;}};
+  utterance.onstart=()=>{if(current===sequence){speakButton.dataset.speaking='true';status.textContent='Speaking…';}};
+  utterance.onend=()=>{if(current===sequence){speakButton.dataset.speaking='false';status.textContent='Finished speaking. Your message is still here.';stopButton.disabled=true;}};
+  utterance.onerror=()=>{if(current===sequence){speakButton.dataset.speaking='false';status.textContent='Speech could not play. Your written message is still here. Try Speak or Replay again.';stopButton.disabled=true;}};
   try{synth.speak(utterance);}catch(_){utterance.onerror();}
  };
  const refreshVoices=()=>{
@@ -58,7 +59,7 @@
   const card=event.target.closest('[data-picture-card]');if(!card||card.disabled||!access)return;
   if(words.length>=40||(text().length+(words.length?1:0)+card.dataset.text.length)>1000){status.textContent='Your message is full. Remove a word or clear it before adding more.';return;}
   words.push({label:card.dataset.label,text:card.dataset.text});
-  grid.querySelectorAll('[data-selected]').forEach(item=>delete item.dataset.selected);card.dataset.selected='true';update();if(enabled.checked)speak(card.dataset.text);
+  grid.querySelectorAll('[data-selected]').forEach(item=>{delete item.dataset.selected;item.removeAttribute('aria-current');});card.dataset.selected='true';card.setAttribute('aria-current','true');window.OlumiraMotion?.feedback(card);update();if(enabled.checked)speak(card.dataset.text);
  });
  const useSaved=button=>{if(!access)return;words=[{label:button.textContent.trim(),text:button.dataset.text}];update();if(enabled.checked)speak(text());};
  root.querySelector('.quick-phrase-list').addEventListener('click',event=>{const button=event.target.closest('[data-saved-phrase]');if(button)useSaved(button);});
@@ -79,7 +80,7 @@
     const data=await response.json();if(!response.ok)throw new Error(data.error||'The phrase was not saved. Try again.');
     const list=root.querySelector('.quick-phrase-list');const empty=list.querySelector('p');if(empty)empty.remove();
     let button=list.querySelector(`[data-phrase-id="${data.id}"]`);if(!button){button=document.createElement('button');button.type='button';button.className='text-button';button.dataset.savedPhrase='';button.dataset.phraseId=data.id;list.append(button);}button.dataset.text=data.text;button.textContent=data.label;
-    close();status.textContent='Phrase saved for this profile.';form.reset();form.elements.creation_key.value=crypto.randomUUID().replaceAll('-','');error.textContent='';
+    close();status.textContent='Phrase saved for this profile.';window.OlumiraMotion?.feedback(status);form.reset();form.elements.creation_key.value=crypto.randomUUID().replaceAll('-','');error.textContent='';
    }catch(exc){error.textContent=exc instanceof TypeError?'Connection interrupted. Your phrase has not been confirmed saved. Try again.':exc.message;}
    finally{pending=false;submit.disabled=false;}
   });
@@ -95,6 +96,6 @@
   }catch(_){notice.hidden=false;notice.textContent='Connection interrupted. You can use the pictures on this page. Reconnect before saving new phrases.';}
  };
  const timer=setInterval(checkAccess,30000);document.addEventListener('visibilitychange',checkAccess);
- window.addEventListener('pagehide',()=>{if(supported)synth.cancel();words=[];lastSpoken='';});
+ window.addEventListener('pagehide',()=>{speakButton.dataset.speaking='false';if(supported)synth.cancel();words=[];lastSpoken='';});
  update();refreshVoices();
 })();

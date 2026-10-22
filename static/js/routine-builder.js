@@ -81,9 +81,11 @@
         const sibling = direction === 'up' ? row.previousElementSibling : row.nextElementSibling;
         if (!sibling) return;
         snapshot();
+        const positions=window.OlumiraMotion?.capture(list);
         if (direction === 'up') list.insertBefore(row, sibling);
         else list.insertBefore(sibling, row);
         dirty = true; update();
+        if(positions) window.OlumiraMotion.reorder(list,positions);
         row.querySelector(direction === 'up' && row.previousElementSibling ? '[data-step-up]' : '[name=step_title]').focus();
         announce(`Step moved to position ${rows().indexOf(row) + 1}.`);
     };
@@ -130,6 +132,8 @@
         if (!dragged) return;
         const target = document.elementFromPoint(event.clientX,event.clientY)?.closest('[data-step-editor]');
         if (target && target !== dragged && target.parentElement === list) {
+            list.querySelectorAll('.step-drop-target').forEach(row=>row.classList.remove('step-drop-target'));
+            target.classList.add('step-drop-target');
             const rect = target.getBoundingClientRect();
             list.insertBefore(dragged, event.clientY > rect.top + rect.height / 2 ? target.nextElementSibling : target);
             dirty = true; update();
@@ -139,6 +143,7 @@
     });
     const finishDrag = () => {
         if (!dragged) return;
+        list.querySelectorAll('.step-drop-target').forEach(row=>row.classList.remove('step-drop-target'));
         dragged.classList.remove('step-is-dragging');
         announce(`Step moved to position ${rows().indexOf(dragged) + 1}.`);
         dragged.querySelector('.step-drag-handle').focus(); dragged = null;

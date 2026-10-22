@@ -141,10 +141,10 @@ def create_app(config=None):
     @app.context_processor
     def personal_display():
         from flask import has_request_context
-        if has_request_context() and current_user.is_authenticated and request.blueprint != 'public':
+        if has_request_context() and current_user.is_authenticated:
             from services.personal_settings import get
             values = {'personal_pref': get(), 'notification_count': 0, 'notification_preview': []}
-            if getattr(g, 'workspace_id', None) and current_user.email_verified:
+            if request.blueprint != 'public' and getattr(g, 'workspace_id', None) and current_user.email_verified:
                 from services.notifications import unread_count, inbox
                 values.update(notification_count=unread_count(), notification_preview=inbox(state='unread')[:3])
             return values

@@ -1,3 +1,4 @@
+{% from 'components/garden.html' import garden %}
 {% extends 'public/base.html' %}
 {% block head %}
 <link rel="stylesheet" href="{{ url_for('static',filename='css/style.css') }}">
@@ -10,7 +11,7 @@
         <p class="eyebrow">A LITTLE STRUCTURE. A LITTLE MORE CALM.</p>
         <p class="auth-intro-title">A calmer day starts here.</p>
         <p>A thoughtful space for daily routines, shared moments, and the little steps that matter.</p>
-        <img src="{{ url_for('static', filename='images/welcome-garden.svg') }}" alt="" width="390" height="200">
+        {{ garden() }}
     </div>
     <div class="dashboard-card auth-card">
         {% if config.MAIL_BACKEND == 'development' and config.APP_ENV != 'production' %}<p class="auth-hint mail-preview-notice" role="note">Local preview · Email is available through the development inbox.</p>{% endif %}

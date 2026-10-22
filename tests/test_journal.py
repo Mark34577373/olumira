@@ -159,6 +159,17 @@ class JournalTests(unittest.TestCase):
         )
 
 
+    def test_save_confirmation_requires_a_successful_server_write(self):
+        self.assertNotIn('Observation saved.', self.client.get('/observations?saved=1').text)
+        rejected=post(self.client,'/observations',self.values(activity=''))
+        self.assertEqual(rejected.status_code,422)
+        self.assertNotIn('Observation saved.',rejected.text)
+        saved=post(self.client,'/observations',self.values(),follow_redirects=True)
+        self.assertIn('Observation saved.',saved.text)
+        self.assertIn('ui-alert-success',saved.text)
+        self.assertNotIn('Observation saved.',self.client.get('/observations?saved=1').text)
+
+
 class AccessLoggingTests(unittest.TestCase):
     def test_access_query_is_redacted_without_mutating_request(self):
         import logging

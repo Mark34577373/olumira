@@ -1,0 +1,90 @@
+/* Shared, optional Olumira motion. Content is never hidden waiting for JavaScript. */
+:root {
+  --motion-enter:450ms;
+  --motion-fast:180ms;
+  --motion-stagger:35ms;
+  --motion-distance:8px;
+  --motion-ease:cubic-bezier(.2,.65,.3,1);
+  --motion-loop:8s;
+}
+body[data-authenticated=true] {--motion-enter:180ms;--motion-stagger:20ms;--motion-distance:4px}
+@keyframes olumira-enter {
+  from {opacity:.98;transform:translateY(var(--motion-distance))}
+  to {opacity:1;transform:none}
+}
+@keyframes olumira-settle {from {opacity:.98} to {opacity:1}}
+@keyframes olumira-sun {50% {transform:translateY(-2px)}}
+@keyframes olumira-glow {50% {opacity:.88}}
+@keyframes olumira-leaves {50% {transform:rotate(.65deg)}}
+@keyframes olumira-dots {50% {transform:translateY(-1.5px)}}
+.motion-enter {animation:olumira-enter var(--motion-enter) var(--motion-ease) both;animation-delay:calc(var(--motion-order,0) * var(--motion-stagger))}
+.motion-settle {animation:olumira-settle var(--motion-fast) ease-out both}
+/* No layout, number or chart-value interpolation. */
+.stat-value strong {font-variant-numeric:tabular-nums}
+.motion-still {animation:none!important}
+.garden-illustration {display:block;max-width:100%;height:auto;overflow:hidden}
+.garden-sun,.garden-glow,.garden-leaves,.garden-dots {animation-play-state:paused!important}
+.garden-sun {animation:olumira-sun var(--motion-loop) ease-in-out infinite}
+.garden-glow {animation:olumira-glow 10s ease-in-out infinite;transform-origin:229px 94px}
+.garden-leaves {transform-origin:195px 200px;animation:olumira-leaves 9s ease-in-out infinite}
+.garden-leaves.layer-2 {animation-duration:11s;animation-direction:reverse}
+.garden-leaves.layer-3 {animation-duration:7s}
+.garden-dots {animation:olumira-dots 12s ease-in-out infinite}
+html[data-motion-visible=true] [data-garden-active=true] :is(.garden-sun,.garden-glow,.garden-leaves,.garden-dots) {animation-play-state:running!important}
+.preview-greeting .garden-illustration {width:32%;flex-shrink:0}
+.public-auth-main .auth-intro .garden-illustration {margin-top:32px}
+.public-site :is(.public-button,.public-text-link,.public-navigation a),
+body[data-authenticated=true] :is(.routine-button,.text-button,.action-button,.care-tabs a,.routine-subnav a,.settings-sections a) {
+  transition:transform var(--motion-fast) var(--motion-ease),background-color var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast),text-decoration-color var(--motion-fast);
+}
+/* Only meaningful destinations / enabled controls lift. Assistive picture cards stay put. */
+@media(hover:hover) {
+  .public-button:not(:disabled):not([aria-disabled=true]):hover,
+  body[data-authenticated=true] :is(a.routine-button,.action-button):not([aria-disabled=true]):hover {transform:translateY(-1px);box-shadow:0 5px 14px #214d3a16}
+  .feature-overview>a:hover {transform:translateY(-3px)}
+  .unified-event>a:hover {text-decoration-thickness:2px}
+}
+.feature-overview>a {transition:transform var(--motion-fast) var(--motion-ease),border-color var(--motion-fast),box-shadow var(--motion-fast)}
+.public-button:not(:disabled):not([aria-disabled=true]):active,
+body[data-authenticated=true] .routine-button:not(:disabled):not([aria-disabled=true]):active {transform:translateY(0);box-shadow:none}
+.public-site .public-text-link:hover {text-decoration-thickness:2px}
+.public-motion-control {display:inline-flex;min-height:44px;align-items:center;margin-top:14px;border:1px solid var(--line);border-radius:10px;padding:8px 12px;background:#fff;color:var(--green);font:inherit;font-size:12px;cursor:pointer}
+/* Native semantics govern opening, closing and focus. No delayed hidden controls. */
+body[data-authenticated=true] :is(details,dialog) {--motion-distance:4px}
+body[data-authenticated=true] details[open]>.account-panel,
+body[data-authenticated=true] details[open]>.filter-fields,
+body[data-authenticated=true] details[open]>.journal-table-wrap,
+body[data-authenticated=true] dialog[open],
+body[data-authenticated=true] [data-wizard-step]:not([hidden]),
+body[data-authenticated=true] .setup-step,
+.public-site dialog[open],
+.public-navigation:not([hidden]) {animation:olumira-enter var(--motion-fast) var(--motion-ease)}
+body[data-authenticated=true] details>summary {transition:background-color var(--motion-fast),border-color var(--motion-fast)}
+body[data-authenticated=true] :is(input[type=checkbox],input[type=radio]) {transition:accent-color var(--motion-fast);accent-color:var(--green)}
+body[data-authenticated=true] progress::-webkit-progress-value {transition:width var(--motion-fast) var(--motion-ease)}
+body[data-authenticated=true] progress::-moz-progress-bar {transition:width var(--motion-fast) var(--motion-ease)}
+body[data-authenticated=true] .ring-value {transition:stroke-dasharray var(--motion-fast) var(--motion-ease)}
+body[data-authenticated=true] :is(.ui-alert-success,.task.completed .task-check,.notification-menu summary>span) {animation:olumira-settle var(--motion-fast) ease-out}
+body[data-authenticated=true] .notification-card {transition:border-color var(--motion-fast),background-color var(--motion-fast)}
+body[data-authenticated=true] :is(.picture-card,.phrase-token) {transition:background-color var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast)}
+.picture-card[aria-current=true] {border-color:var(--green);outline:2px solid var(--green);outline-offset:2px}
+#speak-phrase[data-speaking=true] {box-shadow:0 0 0 3px var(--green-soft);outline:3px double var(--green);outline-offset:3px}
+[data-step-editor] {transition:border-color var(--motion-fast),background-color var(--motion-fast)}
+.step-drop-target {outline:3px dashed var(--green);outline-offset:3px}
+[data-local-timer] {transition:border-color var(--motion-fast),background-color var(--motion-fast)}
+[data-timer-output] {font-variant-numeric:tabular-nums}
+[data-timer-state=running] {border-color:var(--green)}
+[data-timer-state=finished] {background:var(--green-soft)}
+@media(max-width:650px) {.about-intro .garden-illustration {max-width:270px;margin:auto}}
+@media(max-width:768px) {.public-auth-main .auth-intro .garden-illustration {display:none}}
+/* Preference changes cancel ongoing effects too, not just future ones. */
+html[data-motion-paused=true] *,html[data-motion-paused=true] *::before,html[data-motion-paused=true] *::after,
+html[data-reduced-motion=true] *,html[data-reduced-motion=true] *::before,html[data-reduced-motion=true] *::after,
+html[data-reduced-effects=true] *,html[data-reduced-effects=true] *::before,html[data-reduced-effects=true] *::after,
+.pref-reduced-motion,.pref-reduced-motion *,.pref-reduced-motion *::before,.pref-reduced-motion *::after {
+  animation:none!important;transition:none!important;scroll-behavior:auto!important;
+}
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}
+}
+@media print {*,*::before,*::after {animation:none!important;transition:none!important}}
