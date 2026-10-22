@@ -8,13 +8,14 @@ from olumira.forms import LoginForm, RegistrationForm
 from services.authentication import normalize_email, register_user, authenticate, start_session, end_session
 
 from olumira.privacy_logging import security_event
+from services.account_journey import after_login
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
-SAFE_DESTINATIONS = frozenset({'/', '/routines', '/communication', '/observations', '/resources', '/auth/settings'})
+SAFE_DESTINATIONS = frozenset({'/', '/routines', '/communication', '/observations', '/resources', '/auth/settings', '/dashboard', '/care/tasks', '/calendar', '/setup', '/workspaces/accept'})
 
 
 def safe_destination(value):
-    return value if value in SAFE_DESTINATIONS else url_for('dashboard.dashboard')
+    return value if value in SAFE_DESTINATIONS else (url_for('dashboard.dashboard') if value else '')
 
 
 def account_rate_key():
@@ -34,14 +35,15 @@ def settings_account_key():
 @limiter.limit(lambda: current_app.config['AUTH_REGISTER_LIMIT'], methods=['POST'])
 def register():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
+        return redirect(after_login())
+    if not current_app.config['REGISTRATION_ENABLED']:
+        return redirect(url_for('public.contact'))
     form = RegistrationForm()
     if form.validate_on_submit():
         user = register_user(form.email.data, form.display_name.data, form.password.data)
         if user is not None:
             # Registration never implicitly grants a login session.
-            from services.account_recovery import request_link
-            request_link(user.email, 'verify_email')
+            _request_link_safely(user.email, 'verify_email')
         # Public response does not disclose whether the address already exists.
         return redirect(url_for('auth.check_email'))
     return render_template('auth/register.html', form=form), 422 if request.method == 'POST' else 200
@@ -52,14 +54,14 @@ def register():
 @limiter.limit(lambda: current_app.config['AUTH_LOGIN_ACCOUNT_LIMIT'], key_func=account_rate_key, methods=['POST'])
 def login():
     if current_user.is_authenticated:
-        return redirect(url_for('dashboard.dashboard'))
+        return redirect(after_login())
     form, error = LoginForm(), None
     destination = safe_destination(request.form.get('next') or request.args.get('next'))
     if form.validate_on_submit():
         user = authenticate(form.email.data, form.password.data)
         if user and start_session(user):
             security_event('auth.login_success', user.id)
-            return redirect(destination if user.email_verified else url_for('auth.verification'))
+            return redirect(after_login(destination))
         error = 'Email or password is incorrect.'
     elif request.method == 'POST':
         error = 'Email or password is incorrect.'
@@ -78,7 +80,7 @@ def logout():
     return redirect(url_for('auth.login'))
 
 
-GENERIC_LINK_MESSAGE = 'If an account needs this email, a link will arrive shortly. Check your inbox and spam folder.'
+GENERIC_LINK_MESSAGE = 'If an account needs this email, a link can be delivered only through the configured account email service. Delivery is not confirmed here. Check your inbox and spam folder, or contact your test organizer if a link does not arrive.'
 
 
 def _request_link_safely(email, purpose):
@@ -118,7 +120,7 @@ def resend_verification():
 @bp.get('/check-email')
 def check_email():
     return render_template('auth/message.html', heading='Check your email',
-                           message='If this address can be registered, a verification link will arrive shortly. Existing members can sign in or request a password reset.')
+                           message='If this address can be registered, verification is required before using care tools. Delivery depends on the configured account email service and is not confirmed here. Existing members can sign in or request a password reset.')
 
 
 @bp.get('/verification')

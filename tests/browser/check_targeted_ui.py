@@ -46,7 +46,7 @@ def main():
                 page.locator('#email').fill('fictional-targeted-ui@example.com')
                 page.locator('#password').fill(PASSWORD)
                 page.locator('.auth-submit').click()
-                expect(page).to_have_url(origin+'/')
+                expect(page).to_have_url(origin+'/setup')
                 page.goto(origin+'/care/tasks')
                 cta=page.get_by_role('link',name='Share a responsibility',exact=True)
                 expect(cta).to_be_visible()

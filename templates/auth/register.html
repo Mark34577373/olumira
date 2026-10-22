@@ -14,5 +14,6 @@
     {{ auth_field(form.confirm_password, 'new-password', password=true) }}
     <button class="routine-button auth-submit" type="submit">Create account</button>
 </form>
+<p class="auth-footer">Review our <a href="{{ url_for('public.privacy') }}">draft privacy information</a> and <a href="{{ url_for('public.terms') }}">draft testing terms</a>. Real sensitive care information is not permitted during testing.</p>
 <p class="auth-footer">Already have an account? <a href="{{ url_for('auth.login') }}">Sign in</a></p>
 {% endblock %}

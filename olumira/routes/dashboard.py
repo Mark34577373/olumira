@@ -1,11 +1,16 @@
 from flask import Blueprint, g, render_template
+from flask_login import current_user
 from services.dashboard import dashboard_context
 
 bp = Blueprint("dashboard", __name__)
 
 
+@bp.route("/dashboard")
 @bp.route("/")
 def dashboard():
+    if not current_user.is_authenticated:
+        from .public import home
+        return home()
     return render_template("dashboard.html", **dashboard_context(g.owner_id))
 
 

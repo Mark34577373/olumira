@@ -62,8 +62,8 @@ def create_app(config=None):
 
     csrf.init_app(app)
 
-    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy
-    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy):
+    from .routes import dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy, public
+    for module in (dashboard, routines, communication, observations, resources, auth, workspaces, care, calendar, onboarding, settings, notifications, privacy, public):
         app.register_blueprint(module.bp)
 
     protected_blueprints = {'dashboard', 'routines', 'communication', 'observations', 'resources', 'workspaces', 'care', 'calendar', 'onboarding', 'settings', 'notifications', 'privacy'}
@@ -80,6 +80,8 @@ def create_app(config=None):
     def authorize_workspace():
         # Account security remains available without membership. Verified users
         # still receive the same authorized navigation context as product pages.
+        if request.endpoint == 'dashboard.dashboard' and request.path == '/' and not current_user.is_authenticated and not getattr(g, 'auth_expired', False):
+            return
         if request.endpoint == 'auth.settings' and current_user.is_authenticated and current_user.email_verified:
             from services.workspaces import resolve_context
             resolve_context()
@@ -139,7 +141,7 @@ def create_app(config=None):
     @app.context_processor
     def personal_display():
         from flask import has_request_context
-        if has_request_context() and current_user.is_authenticated:
+        if has_request_context() and current_user.is_authenticated and request.blueprint != 'public':
             from services.personal_settings import get
             values = {'personal_pref': get(), 'notification_count': 0, 'notification_preview': []}
             if getattr(g, 'workspace_id', None) and current_user.email_verified:

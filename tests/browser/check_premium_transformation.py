@@ -144,7 +144,8 @@ def main():
                 page.locator("#email").fill("fiction-board@example.com")
                 page.locator("#password").fill(PASSWORD)
                 page.locator(".auth-submit").click()
-                expect(page).to_have_url(origin + "/")
+                expect(page).to_have_url(origin + "/setup")
+                page.goto(origin + "/")
                 for width in widths:
                     page.set_viewport_size(dict(width=width, height=1000))
                     for index, route in enumerate(routes):

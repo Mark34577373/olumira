@@ -135,6 +135,7 @@ def end_session():
 def load_user(user_id):
     token = session.get('_auth_sid')
     if not isinstance(token, str) or not token.isascii() or not 32 <= len(token) <= 128:
+        g.auth_expired = True
         session.clear()
         return None
     record = db.session.get(AuthSession, token_digest(token))

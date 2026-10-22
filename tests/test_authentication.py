@@ -53,7 +53,7 @@ class AuthenticationTests(unittest.TestCase):
             self.assertIsNotNone(user.updated_at)
             self.assertEqual(len(get_routines(user.owner_id)), 5)
             self.assertEqual(db.session.scalar(select(func.count()).select_from(AuthSession)), 0)
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
 
     def test_validation_duplicate_email_and_passwords_never_echoed(self):
         cases = [dict(email='not-an-email'), dict(display_name='   '), dict(password='short'),
@@ -78,7 +78,7 @@ class AuthenticationTests(unittest.TestCase):
         page = self.client.get(duplicate.location)
         self.assertNotIn('already exists', page.text)
         self.assertNotIn(PASSWORD, page.text)
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
         from olumira.models import EmailOutbox
         with self.app.app_context():
             self.assertEqual(db.session.scalar(select(func.count()).select_from(EmailOutbox)), 1)
@@ -131,7 +131,7 @@ class AuthenticationTests(unittest.TestCase):
             self.assertNotIn('_auth_sid', cookie)
 
     def test_all_application_routes_protected(self):
-        for path in ('/', '/routines', '/communication', '/observations', '/resources'):
+        for path in ('/dashboard', '/routines', '/communication', '/observations', '/resources'):
             response = self.client.get(path)
             self.assertEqual(response.status_code, 302)
             self.assertIn('/auth/login', response.location)
@@ -161,9 +161,9 @@ class AuthenticationTests(unittest.TestCase):
         self.assertEqual(self.client.get('/auth/logout').status_code, 405)
         response = post(self.client, '/auth/logout', follow_redirects=True)
         self.assertIn('signed out safely', response.text)
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
         self.client.set_cookie(name, copied_cookie)
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
 
     def test_absolute_and_idle_expiration_and_bulk_revocation(self):
         user_id, owner = create_user(self.app)
@@ -182,15 +182,15 @@ class AuthenticationTests(unittest.TestCase):
         login(other)
         with self.app.app_context():
             revoke_all_sessions(user_id)
-        self.assertEqual(self.client.get('/').status_code, 302)
-        self.assertEqual(other.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
+        self.assertEqual(other.get('/dashboard').status_code, 302)
 
     def test_forged_identity_without_server_session_rejected(self):
         user_id, owner = create_user(self.app)
         with self.client.session_transaction() as cookie:
             cookie['_user_id'] = user_id
             cookie['_auth_sid'] = 'x' * 43
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
 
     def test_open_redirect_prevention_and_valid_return_path(self):
         create_user(self.app)
@@ -274,7 +274,7 @@ class AuthenticationTests(unittest.TestCase):
         login(self.client)
         with self.client.session_transaction() as cookie:
             cookie['_user_id'] = second
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
 
     def test_duplicate_race_rolls_back_new_owner_and_starter_records(self):
         # Simulate a duplicate precheck racing with another successful registration.

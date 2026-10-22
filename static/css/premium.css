@@ -1,15 +1,6 @@
 /* Olumira Modern Care — shared premium system. Legacy feature geometry stays
    in style.css; this layer owns the cross-product surfaces and interaction language. */
-:root {
-  --green:#214d3a;--green-deep:#173d2d;--green-soft:#e8f0e8;
-  --ink:#24332b;--muted:#52665b;--line:#dfe7df;--canvas:#f6f8f4;--surface:#fff;
-  --peach:#f8e7db;--lavender:#eee8f7;--sky:#e5f0f8;--mint:#e0f2e8;
-  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-5:20px;
-  --space-6:24px;--space-8:32px;--space-10:40px;--space-12:48px;--space-16:64px;
-  --radius-control:12px;--radius-card:22px;--radius-panel:26px;
-  --shadow-soft:0 4px 20px #183d2d06;--shadow-raised:0 12px 32px #183d2d0d;
-  --focus-ring:0 0 0 4px #d9e8dc;--transition:180ms ease;
-}
+@import url('tokens.css');
 body{background:var(--canvas);font-size:16px;line-height:1.65;}
 h1,h2,h3,h4{color:var(--green-deep);line-height:1.25;letter-spacing:-.025em;}
 h1{font-size:clamp(28px,3vw,34px);margin:0 0 var(--space-3);font-weight:750;}

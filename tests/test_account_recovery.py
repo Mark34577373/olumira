@@ -92,7 +92,7 @@ class RecoveryTests(unittest.TestCase):
         response = post(self.client, '/auth/verify-email', {'recovery_code': code})
         self.assertIn('Email verified', response.text)
         self.assertEqual(post(self.client, '/auth/verify-email', {'recovery_code': code}).status_code, 410)
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
         login(self.client)
         self.assertEqual(self.client.get('/').status_code, 200)
 
@@ -140,8 +140,8 @@ class RecoveryTests(unittest.TestCase):
         code, _, _ = email_link(self.app, 'reset_password')
         response = self.reset(code)
         self.assertIn('Password reset', response.text)
-        self.assertEqual(self.client.get('/').status_code, 302)
-        self.assertEqual(other.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
+        self.assertEqual(other.get('/dashboard').status_code, 302)
         self.assertEqual(self.reset(code).status_code, 410)
         with self.app.app_context():
             user = db.session.get(User, user_id)
@@ -219,7 +219,7 @@ class RecoveryTests(unittest.TestCase):
         response = self.settings('password', {'password-current_password': PASSWORD, 'password-password': NEW_PASSWORD,
                                               'password-confirm_password': NEW_PASSWORD})
         self.assertEqual(response.location, '/auth/login')
-        self.assertEqual(other.get('/').status_code, 302)
+        self.assertEqual(other.get('/dashboard').status_code, 302)
         self.assertEqual(self.reset(code).status_code, 410)
         with self.app.app_context():
             self.assertTrue(check_password_hash(db.session.get(User, user_id).password_hash, NEW_PASSWORD))
@@ -240,7 +240,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(post(self.client, '/auth/verify-email', {'recovery_code': code}).status_code, 410)
         response = post(self.client, '/auth/confirm-email', {'recovery_code': code})
         self.assertIn('Email updated', response.text)
-        self.assertEqual(other.get('/').status_code, 302)
+        self.assertEqual(other.get('/dashboard').status_code, 302)
         self.assertEqual(post(self.client, '/auth/confirm-email', {'recovery_code': code}).status_code, 410)
         with self.app.app_context():
             user = db.session.get(User, user_id)
@@ -283,7 +283,7 @@ class RecoveryTests(unittest.TestCase):
         login(other)
         self.assertEqual(self.settings('sessions', {'sessions-current_password': 'wrong'}).status_code, 422)
         self.assertEqual(self.settings('sessions', {'sessions-current_password': PASSWORD}).location, '/auth/login')
-        self.assertEqual(other.get('/').status_code, 302)
+        self.assertEqual(other.get('/dashboard').status_code, 302)
 
     def test_new_endpoints_enforce_csrf_and_resend_rate_limits(self):
         for path in ('/auth/verify-email', '/auth/forgot-password', '/auth/reset-password', '/auth/resend-verification', '/auth/confirm-email', '/auth/settings'):
@@ -362,7 +362,7 @@ class RecoveryTests(unittest.TestCase):
         self.assertEqual(response.status_code, 429)
         with self.app.app_context(), transaction():
             db.session.get(User, user_id).auth_version += 1
-        self.assertEqual(self.client.get('/').status_code, 302)
+        self.assertEqual(self.client.get('/dashboard').status_code, 302)
 
     def test_email_target_taken_after_request_and_purpose_binding(self):
         user_id, owner = create_user(self.app)

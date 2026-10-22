@@ -74,7 +74,8 @@ def main():
                     page.locator("#email").fill("fictional-premium@example.com")
                     page.locator("#password").fill(PASSWORD)
                     page.locator(".auth-submit").click()
-                    expect(page).to_have_url(origin + "/")
+                    expect(page).to_have_url(origin + "/setup")
+                    page.goto(origin + "/")
 
                 signin()
                 page.goto(origin + "/settings")

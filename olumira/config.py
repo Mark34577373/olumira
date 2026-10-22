@@ -33,6 +33,7 @@ def configuration(overrides=None):
         AUTH_LOGIN_IP_LIMIT='10 per minute; 100 per hour',
         AUTH_LOGIN_ACCOUNT_LIMIT='20 per hour',
         AUTH_REGISTER_LIMIT='5 per hour',
+        REGISTRATION_ENABLED=os.getenv('REGISTRATION_ENABLED', 'true').lower() == 'true',
         AUTH_RECOVERY_IP_LIMIT='5 per hour', AUTH_RECOVERY_ACCOUNT_LIMIT='3 per hour',
         AUTH_SETTINGS_LIMIT='10 per hour', AUTH_TOKEN_LIMIT='10 per hour',
         INVITATION_SECONDS=int(os.getenv('INVITATION_SECONDS', '86400')),
