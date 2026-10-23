@@ -104,9 +104,11 @@ class PublicExperienceTests(unittest.TestCase):
             page=self.client.get('/')
             self.assertIn('Beta access information',page.text)
             self.assertNotIn('>Get Started<',page.text)
-            self.assertEqual(self.client.get('/auth/register').location,'/contact')
+            closed=self.client.get('/auth/register')
+            self.assertEqual(closed.status_code,403)
+            self.assertIn('Registration is currently closed',closed.text)
             response=post(self.client,'/auth/register',dict(email='no-created@example.com',display_name='Fictional',password=PASSWORD,confirm_password=PASSWORD))
-            self.assertEqual(response.location,'/contact')
+            self.assertEqual(response.status_code,403)
             with self.app.app_context():
                 self.assertIsNone(db.session.scalar(db.select(User).where(User.email=='no-created@example.com')))
         finally:

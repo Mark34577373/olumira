@@ -161,7 +161,9 @@ def create_app(config=None):
         response.headers['X-Content-Type-Options'] = 'nosniff'
         response.headers['X-Frame-Options'] = 'DENY'
         response.headers['Permissions-Policy'] = 'camera=(), microphone=(), geolocation=(), payment=()'
-        response.headers['Referrer-Policy'] = 'no-referrer'
+        # HTTPS CSRF validation requires a same-origin Referer. Suppress it only
+        # for cross-origin requests; no-referrer breaks valid native form POSTs.
+        response.headers['Referrer-Policy'] = 'same-origin'
         response.headers['Content-Security-Policy'] = (
             "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
             "img-src 'self' data:; font-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; object-src 'none'")
@@ -213,6 +215,17 @@ def create_app(config=None):
 
     @app.errorhandler(CSRFError)
     def csrf_error(error):
+        # Fixed diagnostic codes only: never log tokens, cookies, URLs or input.
+        reason = {
+            'The referrer header is missing.': 'referrer_missing',
+            'The referrer does not match the host.': 'referrer_mismatch',
+            'The CSRF token is missing.': 'token_missing',
+            'The CSRF session token is missing.': 'session_missing',
+            'The CSRF token has expired.': 'token_expired',
+            'The CSRF token is invalid.': 'token_invalid',
+            'The CSRF tokens do not match.': 'token_mismatch',
+        }.get(error.description, 'validation_failed')
+        app.logger.warning('CSRF rejected: endpoint=%s reason=%s', request.endpoint, reason)
         return render_template('error.html', code=400, heading='Your form needs a refresh',
                                message='For your security, please refresh the page and try again.'), 400
 

@@ -255,7 +255,7 @@ class AuthenticationTests(unittest.TestCase):
         response = self.client.get('/')
         self.assertEqual(response.headers['Cache-Control'], 'no-store')
         self.assertIn("script-src 'self'", response.headers['Content-Security-Policy'])
-        self.assertEqual(response.headers['Referrer-Policy'], 'no-referrer')
+        self.assertEqual(response.headers['Referrer-Policy'], 'same-origin')
 
     def test_sensitive_input_does_not_appear_in_error_logs(self):
         from sqlalchemy.exc import SQLAlchemyError

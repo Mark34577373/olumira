@@ -82,7 +82,7 @@ class SecurityHardeningTests(unittest.TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers["X-Frame-Options"], "DENY")
-        self.assertEqual(response.headers["Referrer-Policy"], "no-referrer")
+        self.assertEqual(response.headers["Referrer-Policy"], "same-origin")
         self.assertIn("object-src 'none'", response.headers["Content-Security-Policy"])
         self.assertIn("microphone=()", response.headers["Permissions-Policy"])
         self.assertIn("max-age=", response.headers["Strict-Transport-Security"])

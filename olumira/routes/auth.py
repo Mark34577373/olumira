@@ -37,7 +37,7 @@ def register():
     if current_user.is_authenticated:
         return redirect(after_login())
     if not current_app.config['REGISTRATION_ENABLED']:
-        return redirect(url_for('public.contact'))
+        return render_template('auth/registration_closed.html'), 403
     form = RegistrationForm()
     if form.validate_on_submit():
         user = register_user(form.email.data, form.display_name.data, form.password.data)
