@@ -20,6 +20,7 @@ def configuration(overrides=None):
     database_url = os.getenv('DATABASE_URL') if environment != 'testing' else None
     values = dict(
         APP_ENV=environment, SECRET_KEY=(secrets.token_urlsafe(48) if environment == 'testing' else secret or DEV_SECRET),
+        OLUMIRA_DB_DIAGNOSTIC=os.getenv('OLUMIRA_DB_DIAGNOSTIC', '0') == '1',
         DATABASE=':memory:' if environment == 'testing' else str(ROOT / 'database' / 'olumira.db'),
         DATABASE_URL=database_url,
         TESTING=environment == 'testing', DEBUG=False,

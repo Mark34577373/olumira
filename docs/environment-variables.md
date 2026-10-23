@@ -10,6 +10,7 @@ production credentials to local tests. The template refers to an existing
 | PYTHON_VERSION | `3.14.8` selected security maintenance release; verify Render availability, native TLS versions and reproducible build before approval |
 | SECRET_KEY | Independent cryptographic random value, at least 32 characters |
 | DATABASE_URL | Runtime DML role, `postgresql://…?sslmode=verify-full`; external verified hostname, never IP/certificate bypass |
+| OLUMIRA_DB_DIAGNOSTIC | Temporary: explicitly `1` for read-only startup connectivity/schema checks. Default `0`; remove or set `0` immediately after troubleshooting. No public endpoint, account records or raw error messages. See [diagnostic procedure](render-postgres-registration.md). |
 | RATELIMIT_STORAGE_URI | Authenticated external `rediss://…` with normal certificate validation; never `ssl_cert_reqs=none` |
 | PUBLIC_APP_URL | Exact canonical HTTPS origin |
 | TRUSTED_HOSTS | Canonical hostname(s), comma separated; default derives canonical URL; allow health-check host explicitly when necessary |

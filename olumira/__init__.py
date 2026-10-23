@@ -244,4 +244,6 @@ def create_app(config=None):
     register_commands(app)
     from .mail_commands import register_mail_commands
     register_mail_commands(app)
+    from .database_diagnostic import run as diagnose_database
+    diagnose_database(app)
     return app
