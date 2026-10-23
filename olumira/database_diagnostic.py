@@ -16,7 +16,9 @@ def connection_status(error):
     message = str(getattr(error, 'orig', None) or error).lower()
     for status, phrases in (
         ('failed_tls_hostname', ('does not match host name', 'hostname mismatch')),
-        ('failed_tls_trust', ('certificate verify failed', 'root certificate file', 'unknown ca')),
+        ('failed_tls_trust', ('certificate verify failed', 'root certificate file', 'unknown ca',
+                              'certificate has expired', 'certificate is not yet valid',
+                              'self-signed certificate', 'unable to get local issuer certificate')),
         ('failed_dns', ('could not translate host name', 'name or service not known', 'nodename nor servname')),
         ('failed_timeout', ('timeout expired', 'connection timed out')),
         ('failed_refused', ('connection refused',)),
@@ -43,7 +45,7 @@ def report_failure(app, stage, error):
     if not isinstance(state, str) or not re.fullmatch(r'[A-Z0-9]{5}', state):
         state = 'unavailable'
     status = connection_status(error) if stage == 'connection' else 'failed'
-    if stage in {'configuration', 'driver', 'migration_inventory'}:
+    if stage in {'configuration', 'driver', 'migration_inventory', 'tls_runtime'}:
         category = 'configuration'
     elif state.startswith('28'):
         category = 'authentication'
@@ -59,9 +61,13 @@ def report_failure(app, stage, error):
         }.get(status, 'connection')
     else:
         category = 'SQL execution'
+    details = {}
+    if status == 'failed_tls_trust':
+        from .tls_diagnostic import failure_detail
+        details['tls_trust_detail'] = failure_detail(error)
     emit(app, stage, status, error_class=type(error).__name__,
          db_error_class=type(original).__name__ if original is not None else 'none',
-         sqlstate=state, failure_category=category)
+         sqlstate=state, failure_category=category, **details)
 
 def run(app):
     # Never infer enablement from production/Render and never expose an endpoint.
@@ -77,6 +83,10 @@ def run(app):
     stage = 'migration_inventory'
     try:
         with app.app_context():
+            stage = 'tls_runtime'
+            from .tls_diagnostic import report as report_tls
+            report_tls(app, db.engine, emit)
+            stage = 'migration_inventory'
             from .models import (Owner, User, FamilyWorkspace, WorkspaceMembership,
                                  AuditEvent, Routine, RoutineStep, AccountToken,
                                  EmailOutbox, AuthSession)

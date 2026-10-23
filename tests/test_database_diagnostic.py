@@ -94,7 +94,10 @@ def test_connection_failure_does_not_reveal_messages(app,caplog,message,status):
     event=records(caplog)[0]
     category={'failed_tls_trust':'TLS','failed_tls_hostname':'TLS','failed_dns':'DNS',
               'failed_timeout':'network','failed_refused':'network','failed_authentication':'authentication'}.get(status,'connection')
-    assert event==dict(stage='connection',status=status,error_class='OperationalError',db_error_class='OperationalError',sqlstate='unavailable',failure_category=category)
+    expected=dict(stage='connection',status=status,error_class='OperationalError',db_error_class='OperationalError',sqlstate='unavailable',failure_category=category)
+    if status=='failed_tls_trust':
+        expected['tls_trust_detail']='root_file_missing' if message.startswith('root certificate file') else 'verification_failed_unspecified'
+    assert event==expected
     assert 'PRIVATE-' not in caplog.text
 
 
