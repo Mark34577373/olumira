@@ -16,7 +16,19 @@ class OlumiraFlask(Flask):
 def create_app(config=None):
     root = Path(__file__).resolve().parent.parent
     app = OlumiraFlask(__name__, template_folder=str(root / 'templates'), static_folder=str(root / 'static'))
-    app.config.update(configuration(config))
+    from .database_diagnostic import enabled, emit, report_failure
+    diagnostic = enabled(config)
+    if diagnostic:
+        import os
+        configured_url = (config or {}).get('DATABASE_URL', os.getenv('DATABASE_URL'))
+        emit(app, 'configuration', 'checked', database_url_configured=bool(configured_url))
+    try:
+        app.config.update(configuration(config))
+    except Exception as error:
+        if diagnostic:
+            report_failure(app, 'configuration', error)
+            raise RuntimeError('Startup configuration failed; see sanitized database_diagnostic logs') from None
+        raise
     from .privacy_logging import configure_access_logging
     configure_access_logging()
 
@@ -25,9 +37,17 @@ def create_app(config=None):
     from sqlalchemy import event
     from sqlalchemy.exc import SQLAlchemyError
     from werkzeug.exceptions import InternalServerError
-    db.init_app(app)
+    try:
+        db.init_app(app)
+    except Exception as error:
+        if diagnostic:
+            report_failure(app, 'driver' if isinstance(error, ImportError) else 'configuration', error)
+            raise RuntimeError('Database engine initialization failed; see sanitized database_diagnostic logs') from None
+        raise
     migrate.init_app(app, db, directory=str(root / 'migrations'))
     with app.app_context():
+        if diagnostic:
+            emit(app, 'driver', 'initialized', postgresql=db.engine.dialect.name == 'postgresql')
         if db.engine.dialect.name == 'sqlite':
             @event.listens_for(db.engine, 'connect')
             def sqlite_foreign_keys(connection, record):

@@ -1,4 +1,4 @@
-# Render registration: temporary database startup diagnostic
+# Render shared authentication: temporary database startup diagnostic
 
 2026-10-22. No commit, push, deployment or production data change performed.
 
@@ -9,6 +9,11 @@ The supplied trace ends at `services/authentication.py:49:register_user`:
 ```python
 db.session.scalar(select(User.id).where(User.email == email))
 ```
+
+Login also fails at `services/authentication.py:80:authenticate`, the normalized
+email user lookup on the **same SQLAlchemy engine**. Both paths therefore depend
+on the same database connection, TLS settings and schema. There is no evidence
+for two separate authentication logic bugs.
 
 This is the normalized-email duplicate check, before user/workspace writes and
 verification email queuing. SQLAlchemy initializes its engine during app creation
@@ -39,20 +44,27 @@ Restart/redeploy through the normal operator-controlled process. Inspect Logs fo
 `database_diagnostic`. Copy only those sanitized entries when requesting help.
 Then remove the flag or set it to `0` and restart/redeploy; do not leave it enabled.
 No new public endpoint is installed. The default is off; `true` is not an alias
-for `1`. Each app startup runs once, so multiple workers/restarts can emit multiple
-sets. Existing startup config validation must pass before the diagnostic can run.
+for `1`. Each Flask app instance probes once, even if its runner is called again. Multiple
+worker app instances/restarts can emit multiple sets; with Gunicorn preload, the
+probe runs before fork and closes its sockets. Configuration/driver failures are
+reported early; connectivity/schema checks require successful initialization.
 
 The probe uses the app's **same engine, runtime role, URL, CA options and timeouts**:
 
-1. Open a connection; emit connected or a sanitized failure.
-2. For PostgreSQL, begin a server-enforced read-only transaction.
-3. Run SELECT 1.
-4. Check alembic_version existence and read revision identifiers only. Only
+1. Report `database_url_configured` as a Boolean **before** validating startup
+   configuration. Configuration failures report sanitized diagnostics and still
+   stop startup. Driver/engine initialization failures are also reported without
+   raw exceptions; successful initialization reports `driver: initialized` and a
+   Boolean indicating whether the dialect is PostgreSQL.
+2. Open a connection; emit connected or a sanitized failure.
+3. For PostgreSQL, begin a server-enforced read-only transaction.
+4. Run SELECT 1.
+5. Check alembic_version existence and read revision identifiers only. Only
    repository-known revision IDs may be logged; other values become unrecognized.
-5. Reflect table/column metadata and compare against the current models for
+6. Reflect table/column metadata and compare against the current models for
    owners, users, family_workspaces, workspace_memberships, audit_events, routines,
    routine_steps, account_tokens, email_outbox and auth_sessions.
-6. Close the connection and dispose pooled sockets before a possible Gunicorn
+7. Close the connection and dispose pooled sockets before a possible Gunicorn
    preload/fork. In-memory SQLite test connections are not discarded.
 
 The probe never selects account/care records or performs INSERT/UPDATE/DELETE,
@@ -68,6 +80,10 @@ semantics. No SMTP or Redis probe is included in this DB-only diagnostic.
 
 | Stage/status | Meaning / next step |
 | --- | --- |
+| configuration / checked | `database_url_configured` reports presence only; false in production requires configuring DATABASE_URL. No value is printed. |
+| configuration / failed | Startup settings failed validation; use the documented required variables. Startup remains blocked. |
+| driver / initialized | PostgreSQL DBAPI/engine initialized when postgresql=true. This does not prove connectivity. |
+| driver / failed | Import/driver initialization failed; restore pinned dependencies/runtime. No URL or import exception text is exposed. |
 | connection / failed_tls_trust | libpq reported a trust/root-certificate error. Supply trusted roots while retaining verify-full. |
 | connection / failed_tls_hostname | Certificate/hostname mismatch indication. Use the exact verified endpoint hostname; do not use an IP or internal alias. |
 | connection / failed_dns | Name resolution indication. Compare URL privately to the database's current Connect information. |
@@ -79,6 +95,12 @@ semantics. No SMTP or Redis probe is included in this DB-only diagnostic.
 | migration_revision / mismatch | Compare current/expected heads with the release and correct DB. Do not stamp head to conceal missing migrations. |
 | registration_schema / missing_table or missing_columns | Schema visibility/model mismatch; inspect correct DB/schema, privileges and migration state. |
 | all columns present / revision current | Investigate permissions, write-time failures, intermittent connections or another runtime instance using the correlated request diagnostics. |
+
+The `failure_category` field is limited to configuration, DNS, network, TLS,
+authentication, connection or SQL execution. SQLSTATE authentication/connection/
+SQL classes take precedence over textual hints. Unknown connection failures remain
+classified as connection; no DNS/TLS conclusion is inferred from OperationalError
+alone. A read-only-transaction SQL failure is distinct from opening the connection.
 
 Connection status hints are fixed matches of known libpq failure phrases, not a
 claim of exhaustive diagnosis. An actual known SQLSTATE takes precedence over a
@@ -137,7 +159,8 @@ This work did not execute the release runner against production.
 
 ## Files and verification
 
-- New `olumira/database_diagnostic.py`; opt-in setting in `olumira/config.py` and
+- `olumira/database_diagnostic.py`: configuration/driver reporting, failure
+  classification and once-per-app guard; opt-in setting in `olumira/config.py` and
   startup invocation in `olumira/__init__.py`.
 - `.env.example`, environment-variable inventory and this procedure.
 - `tests/test_database_diagnostic.py`: exact opt-in behavior, startup invocation,
@@ -170,3 +193,23 @@ login, sessions, CSRF and rate limits. No external SMTP delivery is claimed.
 
 Sources: [Render connection/TLS documentation](https://render.com/docs/postgresql-creating-connecting#internal-connections)
 and [PostgreSQL CA configuration](https://www.postgresql.org/docs/current/libpq-connect.html#LIBPQ-CONNECT-SSLROOTCERT).
+
+
+## Shared login/signup follow-up verification
+
+The new regression cases cover early configuration failure and missing URL Boolean,
+driver import failure, no private values in either path, successful driver metadata,
+once-per-app behavior and SQLSTATE classification priority. Existing read-only,
+metadata, authentication, failure recovery and redaction cases remain. The combined follow-up run passed **60 tests** in 63.01s. The final diagnostic
+run also checks SQLSTATE classes for missing tables and connection failures; its
+results follow below. An existing OpenSSL legacy-provider warning was emitted. No production diagnostic
+output has yet established the exact hosted failure. After the reviewed code is
+released, enable OLUMIRA_DB_DIAGNOSTIC=1 in Render's web-service Environment and
+save/restart. Free-tier Shell is not needed: read the startup entries in Logs.
+Disable it with 0 after collecting one complete set (or its first failed stage).
+Never copy unsanitized connection errors or secrets when sharing the output.
+
+Final shared-failure diagnostic run: **21 passed** in 5.79s, including SQLSTATE
+classification, once-only execution, early initialization failures and privacy.
+This overlaps the 60-test combined run. `git diff --check` passed. Nothing was
+committed, pushed, migrated or deployed.

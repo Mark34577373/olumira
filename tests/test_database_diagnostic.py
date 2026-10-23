@@ -92,7 +92,9 @@ def test_connection_failure_does_not_reveal_messages(app,caplog,message,status):
     with app.app_context():
         with patch.object(db.engine,'connect',side_effect=error):run(app)
     event=records(caplog)[0]
-    assert event==dict(stage='connection',status=status,error_class='OperationalError',db_error_class='OperationalError',sqlstate='unavailable')
+    category={'failed_tls_trust':'TLS','failed_tls_hostname':'TLS','failed_dns':'DNS',
+              'failed_timeout':'network','failed_refused':'network','failed_authentication':'authentication'}.get(status,'connection')
+    assert event==dict(stage='connection',status=status,error_class='OperationalError',db_error_class='OperationalError',sqlstate='unavailable',failure_category=category)
     assert 'PRIVATE-' not in caplog.text
 
 
@@ -131,3 +133,57 @@ def test_registration_recovers_after_connection_failure(app):
     response=post(client,'/auth/register',data)
     assert response.status_code==302 and response.location=='/auth/check-email'
     with app.app_context():assert db.session.scalar(select(User.id).where(User.email==data['email'])) is not None
+
+
+def test_diagnostic_runs_only_once_per_app(app,caplog):
+    app.config['OLUMIRA_DB_DIAGNOSTIC']=True
+    run(app);run(app)
+    assert sum(e['stage']=='select_1' for e in records(caplog))==1
+
+
+def test_configuration_failure_is_reported_without_secret_values(caplog):
+    with pytest.raises(RuntimeError,match='Startup configuration failed'):
+        create_app(dict(APP_ENV='PRIVATE-INVALID-ENV',DATABASE_URL='postgresql://PRIVATE-USER:PRIVATE-PASSWORD@PRIVATE-HOST/db',OLUMIRA_DB_DIAGNOSTIC=True))
+    events=records(caplog)
+    assert events[0]==dict(stage='configuration',status='checked',database_url_configured=True)
+    assert events[1]['failure_category']=='configuration' and events[1]['error_class']=='ValueError'
+    assert 'PRIVATE-' not in caplog.text
+
+
+def test_configuration_reports_missing_url_boolean(tmp_path,caplog):
+    create_app(dict(APP_ENV='testing',DATABASE=str(tmp_path/'empty.db'),DATABASE_URL=None,OLUMIRA_DB_DIAGNOSTIC=True))
+    events=records(caplog)
+    assert events[0]['database_url_configured'] is False
+    assert any(e['stage']=='driver' and e['status']=='initialized' and e['postgresql'] is False for e in events)
+
+
+def test_driver_initialization_failure_is_sanitized(caplog):
+    with patch.object(db,'init_app',side_effect=ModuleNotFoundError('PRIVATE-DRIVER-DETAIL')):
+        with pytest.raises(RuntimeError,match='engine initialization failed'):
+            create_app(dict(APP_ENV='testing',OLUMIRA_DB_DIAGNOSTIC=True))
+    event=records(caplog)[-1]
+    assert event['stage']=='driver' and event['error_class']=='ModuleNotFoundError'
+    assert 'PRIVATE-' not in caplog.text
+
+
+def test_sqlstate_classification_precedes_message_hint(app,caplog):
+    from psycopg.errors import InvalidPassword
+    from olumira.database_diagnostic import report_failure
+    error=OperationalError('PRIVATE-SQL',{},InvalidPassword('PRIVATE-RAW-MESSAGE'))
+    report_failure(app,'connection',error)
+    event=records(caplog)[0]
+    assert event['sqlstate']=='28P01' and event['failure_category']=='authentication'
+    assert 'PRIVATE-' not in caplog.text
+
+
+@pytest.mark.parametrize('error_type,expected',[
+    ('UndefinedTable','SQL execution'),('ConnectionFailure','connection'),
+])
+def test_server_sqlstate_categories(app,caplog,error_type,expected):
+    from psycopg import errors
+    from olumira.database_diagnostic import report_failure
+    original=getattr(errors,error_type)('PRIVATE-RAW-MESSAGE')
+    report_failure(app,'select_1',OperationalError('PRIVATE-SQL',{},original))
+    event=records(caplog)[0]
+    assert event['failure_category']==expected and event['sqlstate']==original.sqlstate
+    assert 'PRIVATE-' not in caplog.text
