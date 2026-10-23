@@ -42,6 +42,40 @@ def configure_access_logging():
             logger.addFilter(AccessPathFilter())
 
 
+def log_request_failure(error):
+    """Log exception identity and application stack only, never values/messages.
+
+    SQLAlchemy/DBAPI exception strings and normal tracebacks can contain SQL
+    parameters, credentials and care data. Do not use exc_info or format_exc here.
+    """
+    from pathlib import Path
+    from flask import current_app, g, request
+
+    root = Path(current_app.root_path).parent.resolve()
+    frames = []
+    trace = error.__traceback__
+    while trace is not None:
+        code = trace.tb_frame.f_code
+        try:
+            relative = Path(code.co_filename).resolve().relative_to(root)
+        except ValueError:
+            pass
+        else:
+            if relative.parts[0] in {'olumira', 'services'}:
+                frames.append(f'{relative}:{trace.tb_lineno}:{code.co_name}')
+        trace = trace.tb_next
+    original = getattr(error, 'orig', None)
+    sqlstate = getattr(original, 'sqlstate', None)
+    if not isinstance(sqlstate, str) or not re.fullmatch(r'[A-Z0-9]{5}', sqlstate):
+        sqlstate = 'unavailable'
+    current_app.logger.error(
+        'Request exception: request_id=%s endpoint=%s error_class=%s db_error_class=%s sqlstate=%s frames=%s',
+        getattr(g, 'request_id', 'unavailable'), request.endpoint,
+        type(error).__name__, type(original).__name__ if original is not None else 'none',
+        sqlstate, '|'.join(frames) or 'outside_application',
+    )
+
+
 SECURITY_EVENTS = frozenset(
     {
         "auth.login_success",

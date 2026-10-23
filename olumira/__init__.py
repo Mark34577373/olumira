@@ -8,7 +8,8 @@ from .config import configuration
 class OlumiraFlask(Flask):
     def log_exception(self, exc_info):
         # Exception strings can contain SQL parameters or private submitted data.
-        self.logger.error('Unhandled request failure: endpoint=%s', request.endpoint)
+        from .privacy_logging import log_request_failure
+        log_request_failure(exc_info[1])
 
 
 
@@ -231,6 +232,8 @@ def create_app(config=None):
 
     @app.errorhandler(SQLAlchemyError)
     def database_error(error):
+        from .privacy_logging import log_request_failure
+        log_request_failure(error)
         db.session.rollback()
         return error_page(InternalServerError())
 
