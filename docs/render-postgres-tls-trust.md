@@ -168,3 +168,22 @@ Verification results: combined diagnostic/infrastructure/privacy run **37 passed
 (12.76s); final TLS/database diagnostic run **28 passed** (6.05s), overlapping the
 combined run. Both emitted the existing OpenSSL legacy-provider warning.
 `git diff --check` passed. No new runtime dependency was installed.
+
+## Confirmed production follow-up
+
+The operator now confirms psycopg 3.3.6 binary/libpq 18.6, verify-full/system,
+hostname verification required, no TLS override or duplicate arguments, and 148
+parsable certificates in the Linux CA file. These supersede the earlier unknown
+runtime versions. Trust failure remains verification_failed_unspecified.
+
+Smallest next controlled configuration test: replace only sslrootcert=system with
+sslrootcert=/etc/ssl/certs/ca-certificates.crt in the existing External Database
+URL. Preserve verify-full, the exact external hostname and all other settings.
+This uses existing runtime trust material; no new certificate or secret file is
+needed for this test. Keep the temporary diagnostic enabled for one restart and
+require connection=connected followed by select_1=ok before proceeding. Then
+turn the diagnostic off. If it still fails, the available evidence does not show
+that this bundle trusts the endpoint chain; obtain authenticated issuer/bundle
+information from Render rather than adding a guessed certificate or migrating.
+No claim is made about which native OpenSSL default file/directory was previously
+used: system does not necessarily select this particular Linux PEM file.
