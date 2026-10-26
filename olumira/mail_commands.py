@@ -22,7 +22,7 @@ def register_mail_commands(app):
     @app.cli.command('mail-send-pending')
     @click.option('--limit', default=20, type=click.IntRange(1, 100))
     def send_pending(limit):
-        """Deliver queued messages through configured authenticated TLS SMTP."""
+        """Deliver queued messages through configured SMTP or HTTPS transport."""
         try:
             counts = deliver_pending(limit)
         except Exception:

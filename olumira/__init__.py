@@ -174,6 +174,9 @@ def create_app(config=None):
             return values
         return {'personal_pref': None}
 
+    from services.email_delivery import dispatch_request_email
+    app.after_request(dispatch_request_email)
+
     @app.after_request
     def security_headers(response):
         if request.endpoint != 'static':

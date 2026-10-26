@@ -1,14 +1,15 @@
-"""Encrypted transactional outbox; SMTP happens only in the explicit worker."""
+"""Encrypted transactional outbox; SMTP worker and opt-in HTTPS request delivery."""
 import json
 import smtplib
 import ssl
 import time
 import uuid
+import http.client
 from urllib.parse import urlsplit
 from email.message import EmailMessage
 from email.policy import SMTP
 from email.utils import formatdate
-from flask import current_app, render_template
+from flask import current_app, render_template, g, has_request_context
 from cryptography.fernet import Fernet
 from sqlalchemy import select
 from olumira.extensions import db
@@ -42,6 +43,8 @@ def queue_email(user, kind, recipient, *, token=None, expires_at=None, new_email
                       encrypted_payload=cipher().encrypt(json.dumps(payload).encode()).decode(),
                       created_at=moment, available_at=moment, expires_at=expires_at or moment + 86400, attempts=0)
     db.session.add(job)
+    if has_request_context():
+        g.queued_email_ids = getattr(g, 'queued_email_ids', []) + [job.id]
     return job
 
 
@@ -76,17 +79,63 @@ def send_smtp(message):
             raise smtplib.SMTPException('Recipient refused')
 
 
-def deliver_pending(limit=20):
-    if current_app.config['MAIL_BACKEND'] != 'smtp':
-        raise ValueError('SMTP is not configured; use the private local preview command')
+def send_resend(message, job_id):
+    """Fixed HTTPS endpoint, verified system trust, no redirects or response-body logging."""
+    payload = dict(from_=str(message['From']), to=[str(message['To'])],
+                   subject=str(message['Subject']),
+                   text=message.get_body(preferencelist=('plain',)).get_content(),
+                   html=message.get_body(preferencelist=('html',)).get_content(),
+                   headers={'Message-ID': str(message['Message-ID'])})
+    payload['from'] = payload.pop('from_')
+    connection = http.client.HTTPSConnection('api.resend.com', timeout=5,
+                                              context=ssl.create_default_context())
+    try:
+        connection.request('POST', '/emails', body=json.dumps(payload).encode(), headers={
+            'Authorization': 'Bearer ' + current_app.config['RESEND_API_KEY'],
+            'Content-Type': 'application/json', 'User-Agent': 'Olumira/1.0',
+            'Idempotency-Key': 'olumira-' + job_id})
+        response = connection.getresponse()
+        if not 200 <= response.status < 300:
+            raise RuntimeError('Email provider rejected request')
+        result = json.loads(response.read(8192))
+        if not isinstance(result, dict) or not result.get('id'):
+            raise RuntimeError('Email provider did not acknowledge request')
+    finally:
+        connection.close()
+
+
+def dispatch_request_email(response):
+    """Send only this request's committed jobs; never scan other users' mail."""
+    ids = getattr(g, 'queued_email_ids', [])
+    if (response.status_code >= 400 or not ids or
+            current_app.config['MAIL_BACKEND'] != 'resend' or
+            current_app.config['MAIL_DELIVERY_MODE'] != 'request'):
+        return response
+    # Never flush or commit unfinished application writes from a response hook.
+    if db.session.new or db.session.dirty or db.session.deleted:
+        return response
+    try:
+        deliver_pending(limit=min(len(ids), 3), job_ids=ids)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning('Transactional email dispatch unavailable; details redacted')
+    return response
+
+
+def deliver_pending(limit=20, *, job_ids=None):
+    if current_app.config['MAIL_BACKEND'] not in {'smtp', 'resend'}:
+        raise ValueError('Email transport is not configured; use the private local preview command')
     sent, failed, cancelled = 0, 0, 0
     for _ in range(limit):
         with transaction() as store:
             moment = int(time.time())
-            job = store.scalar(select(EmailOutbox).where(
+            query = select(EmailOutbox).where(
                 EmailOutbox.delivered_at.is_(None), EmailOutbox.cancelled_at.is_(None),
                 EmailOutbox.available_at <= moment, EmailOutbox.attempts < 5
-            ).order_by(EmailOutbox.created_at, EmailOutbox.id).with_for_update(skip_locked=True))
+            ).order_by(EmailOutbox.created_at, EmailOutbox.id).with_for_update(skip_locked=True)
+            if job_ids is not None:
+                query = query.where(EmailOutbox.id.in_(job_ids))
+            job = store.scalar(query)
             if job is None:
                 break
             token = store.get(AccountToken, job.token_hash) if job.token_hash else None
@@ -98,7 +147,10 @@ def deliver_pending(limit=20):
                 continue
             job.attempts += 1
             try:
-                send_smtp(message_for(job))
+                if current_app.config['MAIL_BACKEND'] == 'resend':
+                    send_resend(message_for(job), job.id)
+                else:
+                    send_smtp(message_for(job))
             except Exception:
                 # Transport errors can embed recipients, credentials, and full messages.
                 job.last_error = 'delivery_failed'

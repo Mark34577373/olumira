@@ -45,6 +45,8 @@ def configuration(overrides=None):
         EMAIL_CHANGE_TOKEN_SECONDS=int(os.getenv('EMAIL_CHANGE_TOKEN_SECONDS', '1800')),
         PUBLIC_APP_URL='http://127.0.0.1:5000' if environment == 'testing' else os.getenv('PUBLIC_APP_URL', 'http://127.0.0.1:5000' if environment != 'production' else ''),
         MAIL_BACKEND=os.getenv('MAIL_BACKEND', 'development' if environment != 'production' else 'smtp'),
+        RESEND_API_KEY=os.getenv('RESEND_API_KEY', ''),
+        MAIL_DELIVERY_MODE=os.getenv('MAIL_DELIVERY_MODE', 'worker'),
         MAIL_FROM=os.getenv('MAIL_FROM', 'Olumira <no-reply@example.com>'),
         MAIL_ENCRYPTION_KEY=None if environment == 'testing' else os.getenv('MAIL_ENCRYPTION_KEY'),
         SMTP_HOST=os.getenv('SMTP_HOST', ''), SMTP_PORT=int(os.getenv('SMTP_PORT', '587')),
@@ -90,16 +92,22 @@ def configuration(overrides=None):
     public_url = urlsplit(values['PUBLIC_APP_URL'])
     if public_url.scheme not in {'http', 'https'} or not public_url.hostname or public_url.username or public_url.password or public_url.query or public_url.fragment or public_url.path not in {'', '/'}:
         raise ValueError('PUBLIC_APP_URL must be a canonical application origin')
-    if values['MAIL_BACKEND'] not in {'development', 'smtp'} or values['SMTP_SECURITY'] not in {'starttls', 'ssl'}:
-        raise ValueError('Use development or TLS-protected SMTP email delivery')
+    if values['MAIL_BACKEND'] not in {'development', 'smtp', 'resend'} or values['SMTP_SECURITY'] not in {'starttls', 'ssl'}:
+        raise ValueError('Use development, TLS-protected SMTP, or Resend HTTPS email delivery')
+    if values['MAIL_DELIVERY_MODE'] not in {'worker', 'request'}:
+        raise ValueError('MAIL_DELIVERY_MODE must be worker or request')
+    if values['MAIL_DELIVERY_MODE'] == 'request' and values['MAIL_BACKEND'] != 'resend':
+        raise ValueError('Request delivery requires the Resend HTTPS backend')
     for setting in ('VERIFY_TOKEN_SECONDS', 'RESET_TOKEN_SECONDS', 'EMAIL_CHANGE_TOKEN_SECONDS', 'INVITATION_SECONDS'):
         if not 60 <= values[setting] <= 86400:
             raise ValueError('Account token lifetimes must be between one minute and one day')
     if environment == 'production':
         if public_url.scheme != 'https' or not values['MAIL_ENCRYPTION_KEY']:
             raise ValueError('Production requires HTTPS PUBLIC_APP_URL and MAIL_ENCRYPTION_KEY')
-        if values['MAIL_BACKEND'] != 'smtp' or not all(values[key] for key in ('SMTP_HOST', 'SMTP_USERNAME', 'SMTP_PASSWORD')) or values['MAIL_FROM'] == 'Olumira <no-reply@example.com>':
-            raise ValueError('Production requires authenticated SMTP and a configured sender')
+        smtp_ready = values['MAIL_BACKEND'] == 'smtp' and all(values[key] for key in ('SMTP_HOST', 'SMTP_USERNAME', 'SMTP_PASSWORD'))
+        resend_ready = values['MAIL_BACKEND'] == 'resend' and bool(values['RESEND_API_KEY'].strip())
+        if not (smtp_ready or resend_ready) or values['MAIL_FROM'] == 'Olumira <no-reply@example.com>':
+            raise ValueError('Production requires authenticated email delivery and a configured sender')
     if environment == 'testing':
         # Test processes cannot accidentally deliver real email.
         values['MAIL_BACKEND'] = 'development'
